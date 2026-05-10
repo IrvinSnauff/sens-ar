@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SensoryAR — Тренажёр дегустатора</title>
+<title>SensoryAR v2 — Hand Tracking</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Unbounded:wght@300;600;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -20,420 +20,179 @@
   --umami: #ff7a57;
   --pungent: #ff4d4d;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'Space Mono', monospace;
-  background: var(--bg);
-  color: var(--text);
-  height: 100dvh;
-  overflow: hidden;
-}
-
+body { font-family: 'Space Mono', monospace; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; }
 canvas { position: fixed; inset: 0; z-index: 0; }
 
-/* ─── START SCREEN ─── */
+/* ── START ── */
 #start-screen {
   position: fixed; inset: 0; z-index: 50;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 2rem;
+  align-items: center; justify-content: center; padding: 2rem;
   background: var(--bg);
 }
-
 #start-screen::before {
-  content: '';
-  position: absolute; inset: 0;
+  content: ''; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(184,255,87,0.06) 0%, transparent 70%),
               radial-gradient(ellipse 60% 40% at 80% 80%, rgba(87,200,255,0.04) 0%, transparent 60%);
-  pointer-events: none;
 }
+.logo-wrap { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.3rem; }
+.logo-main { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(2.2rem,8vw,3.5rem); color: var(--accent); letter-spacing: -0.02em; }
+.logo-sub  { font-family: 'Unbounded', sans-serif; font-weight: 300; font-size: clamp(2.2rem,8vw,3.5rem); color: var(--text);  letter-spacing: -0.02em; }
+.version   { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--accent2); text-transform: uppercase; margin-bottom: 0.3rem; }
+.tagline   { font-size: 0.7rem; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; margin-bottom: 2rem; }
 
-.logo-wrap {
-  display: flex; align-items: baseline; gap: 0.4rem;
-  margin-bottom: 0.5rem;
-}
-
-.logo-main {
-  font-family: 'Unbounded', sans-serif;
-  font-weight: 800;
-  font-size: clamp(2.2rem, 8vw, 3.5rem);
-  color: var(--accent);
-  letter-spacing: -0.02em;
-}
-
-.logo-sub {
-  font-family: 'Unbounded', sans-serif;
-  font-weight: 300;
-  font-size: clamp(2.2rem, 8vw, 3.5rem);
-  color: var(--text);
-  letter-spacing: -0.02em;
-}
-
-.tagline {
-  font-size: 0.7rem;
-  letter-spacing: 0.25em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 2.5rem;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 360px;
-  margin-bottom: 2.5rem;
-}
-
-.info-cell {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; max-width: 360px; margin-bottom: 2rem; }
+.info-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
 .info-cell strong { color: var(--text); display: block; margin-bottom: 0.1rem; }
 
+.hand-hint {
+  width: 100%; max-width: 360px; margin-bottom: 1.5rem;
+  background: rgba(184,255,87,0.06); border: 1px solid rgba(184,255,87,0.2);
+  border-radius: 12px; padding: 0.9rem 1.1rem;
+  font-size: 0.72rem; line-height: 1.7; color: var(--text);
+}
+.hand-hint strong { color: var(--accent); }
+
 .btn-primary {
-  font-family: 'Unbounded', sans-serif;
-  font-weight: 600;
-  font-size: 0.85rem;
-  letter-spacing: 0.05em;
-  background: var(--accent);
-  color: #04040c;
-  border: none;
-  border-radius: 50px;
-  padding: 1rem 2.5rem;
-  cursor: pointer;
-  width: 100%; max-width: 360px;
-  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 0.85rem;
+  letter-spacing: 0.05em; background: var(--accent); color: #04040c;
+  border: none; border-radius: 50px; padding: 1rem 2.5rem; cursor: pointer;
+  width: 100%; max-width: 360px; transition: transform 0.15s, box-shadow 0.15s;
 }
-
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(184,255,87,0.3); }
-.btn-primary:active { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
-
 .btn-secondary {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.75rem;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 50px;
-  padding: 0.75rem 2rem;
-  cursor: pointer;
-  width: 100%; max-width: 360px;
-  margin-top: 0.75rem;
-  transition: border-color 0.2s, color 0.2s;
+  font-family: 'Space Mono', monospace; font-size: 0.75rem; background: transparent;
+  border: 1px solid var(--border); color: var(--muted); border-radius: 50px;
+  padding: 0.75rem 2rem; cursor: pointer; width: 100%; max-width: 360px;
+  margin-top: 0.75rem; transition: border-color 0.2s, color 0.2s;
 }
-
 .btn-secondary:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+#no-xr-msg { font-size: 0.72rem; color: var(--pungent); margin-top: 1rem; text-align: center; display: none; max-width: 320px; line-height: 1.6; }
 
-#no-xr-msg {
-  font-size: 0.72rem;
-  color: var(--pungent);
-  margin-top: 1rem;
-  text-align: center;
-  display: none;
-  max-width: 320px;
-  line-height: 1.6;
-}
-
-/* ─── OVERLAY (shown in AR/Demo) ─── */
-#overlay {
-  position: fixed; inset: 0; z-index: 100;
-  display: none;
-  pointer-events: none;
-}
+/* ── OVERLAY ── */
+#overlay { position: fixed; inset: 0; z-index: 100; display: none; pointer-events: none; }
 #overlay.active { display: block; }
 
-/* Top bar */
-#top-bar {
-  position: absolute;
-  top: 20px; left: 20px; right: 20px;
-  display: flex; justify-content: space-between; align-items: center;
-  pointer-events: all;
-}
+#top-bar { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; pointer-events: all; }
+#score-pill { font-family: 'Unbounded', sans-serif; font-size: 0.75rem; font-weight: 600; background: rgba(4,4,12,0.85); border: 1px solid var(--border); border-radius: 50px; padding: 0.5rem 1.2rem; color: var(--accent); backdrop-filter: blur(10px); }
+#hand-status { font-size: 0.65rem; background: rgba(4,4,12,0.85); border: 1px solid var(--border); border-radius: 50px; padding: 0.5rem 1rem; color: var(--muted); backdrop-filter: blur(10px); transition: color 0.3s, border-color 0.3s; }
+#hand-status.active { color: var(--accent); border-color: rgba(184,255,87,0.4); }
+#exit-btn { font-family: 'Space Mono', monospace; font-size: 0.72rem; background: rgba(4,4,12,0.85); border: 1px solid var(--border); color: var(--muted); border-radius: 50px; padding: 0.5rem 1rem; cursor: pointer; backdrop-filter: blur(10px); pointer-events: all; }
 
-#score-pill {
-  font-family: 'Unbounded', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(4,4,12,0.85);
-  border: 1px solid var(--border);
-  border-radius: 50px;
-  padding: 0.5rem 1.2rem;
-  color: var(--accent);
-  backdrop-filter: blur(10px);
-}
-
-#exit-btn {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.72rem;
-  background: rgba(4,4,12,0.85);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 50px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: color 0.2s;
-}
-#exit-btn:hover { color: var(--text); }
-
-/* Sample indicators (top center) */
-#sample-dots {
-  position: absolute;
-  top: 20px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 6px;
-  pointer-events: none;
-}
-
-.s-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 0.3s;
-}
+#sample-dots { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
+.s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
 .s-dot.done { background: var(--muted); }
 .s-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 
-/* Main bottom card */
+/* ── TASK CARD ── */
 #task-card {
-  position: absolute;
-  bottom: 30px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
   width: calc(100% - 40px); max-width: 400px;
-  background: rgba(4,4,12,0.9);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 1.5rem;
-  pointer-events: all;
-  backdrop-filter: blur(16px);
+  background: rgba(4,4,12,0.9); border: 1px solid var(--border);
+  border-radius: 20px; padding: 1.5rem; pointer-events: all; backdrop-filter: blur(16px);
 }
+.card-eyebrow { font-size: 0.62rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center; }
+.sample-badge { font-family: 'Unbounded', sans-serif; font-size: 0.65rem; font-weight: 600; color: var(--accent2); background: rgba(87,200,255,0.1); border: 1px solid rgba(87,200,255,0.2); border-radius: 20px; padding: 0.2rem 0.6rem; }
+.card-question { font-family: 'Unbounded', sans-serif; font-weight: 300; font-size: 1rem; line-height: 1.4; color: var(--text); margin-bottom: 1.2rem; }
+.taste-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 
-.card-eyebrow {
-  font-size: 0.62rem;
-  letter-spacing: 0.2em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 0.6rem;
-  display: flex; justify-content: space-between; align-items: center;
-}
-
-.sample-badge {
-  font-family: 'Unbounded', sans-serif;
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: var(--accent2);
-  background: rgba(87,200,255,0.1);
-  border: 1px solid rgba(87,200,255,0.2);
-  border-radius: 20px;
-  padding: 0.2rem 0.6rem;
-}
-
-.card-question {
-  font-family: 'Unbounded', sans-serif;
-  font-weight: 300;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: var(--text);
-  margin-bottom: 1.2rem;
-}
-
-.taste-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-
+/* ── TASTE BUTTONS — hoverable via hand ray ── */
 .t-btn {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.78rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 0.65rem 0.5rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: left;
+  font-family: 'Space Mono', monospace; font-size: 0.78rem;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); border-radius: 10px; padding: 0.65rem 0.5rem;
+  cursor: pointer; transition: all 0.15s; text-align: left;
   display: flex; align-items: center; gap: 0.4rem;
+  position: relative; overflow: hidden;
 }
-
-.t-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
-  transform: translateY(-1px);
+.t-btn::after { /* pinch progress ring */
+  content: ''; position: absolute; inset: 0; border-radius: 10px;
+  border: 2px solid transparent; transition: border-color 0.1s;
 }
-
+.t-btn.hovered { background: rgba(184,255,87,0.08); border-color: rgba(184,255,87,0.5); transform: scale(1.03); }
+.t-btn.hovered::after { border-color: var(--accent); }
+.t-btn.pinching { background: rgba(184,255,87,0.2); }
 .t-btn.full { grid-column: 1 / -1; }
 .t-btn:disabled { cursor: default; }
+.t-btn.correct { background: rgba(184,255,87,0.12); border-color: var(--accent); color: var(--accent); }
+.t-btn.wrong    { background: rgba(255,77,77,0.12);  border-color: var(--pungent); color: var(--pungent); }
 
-.t-btn.correct {
-  background: rgba(184,255,87,0.12);
-  border-color: var(--accent);
-  color: var(--accent);
+/* pinch dwell timer */
+.dwell-bar {
+  position: absolute; bottom: 0; left: 0; height: 3px;
+  background: var(--accent); width: 0%; border-radius: 0 0 10px 10px;
+  transition: width 0.05s linear;
 }
 
-.t-btn.wrong {
-  background: rgba(255,77,77,0.12);
-  border-color: var(--pungent);
-  color: var(--pungent);
-}
-
-/* Feedback card (slides in from top) */
+/* ── FEEDBACK ── */
 #feedback-card {
-  position: absolute;
-  top: 80px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
   width: calc(100% - 40px); max-width: 400px;
-  background: rgba(4,4,12,0.92);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 1.5rem;
-  pointer-events: all;
-  backdrop-filter: blur(16px);
-  display: none;
+  background: rgba(4,4,12,0.92); border: 1px solid var(--border);
+  border-radius: 20px; padding: 1.5rem; pointer-events: all;
+  backdrop-filter: blur(16px); display: none;
 }
-
-#feedback-verdict {
-  font-family: 'Unbounded', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.8rem;
-}
-
-.fb-row {
-  display: flex; align-items: baseline; gap: 0.5rem;
-  margin-bottom: 0.4rem;
-}
-
-.fb-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
-  min-width: 70px;
-}
-
-.fb-value {
-  font-size: 0.8rem;
-  color: var(--text);
-  line-height: 1.4;
-}
-
-.fb-molecule {
-  font-family: 'Unbounded', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-#btn-next {
-  margin-top: 1.2rem;
-  width: 100%;
-  font-family: 'Unbounded', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--accent);
-  color: #04040c;
-  border: none;
-  border-radius: 10px;
-  padding: 0.85rem;
-  cursor: pointer;
-  letter-spacing: 0.05em;
-  transition: opacity 0.2s;
-}
+#feedback-verdict { font-family: 'Unbounded', sans-serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.8rem; }
+.fb-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
+.fb-label { font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); min-width: 70px; }
+.fb-value { font-size: 0.8rem; color: var(--text); line-height: 1.4; }
+.fb-molecule { font-family: 'Unbounded', sans-serif; font-size: 0.85rem; font-weight: 600; }
+#btn-next { margin-top: 1.2rem; width: 100%; font-family: 'Unbounded', sans-serif; font-size: 0.75rem; font-weight: 600; background: var(--accent); color: #04040c; border: none; border-radius: 10px; padding: 0.85rem; cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s; }
 #btn-next:hover { opacity: 0.85; }
 
-/* ─── SCORE SCREEN ─── */
+/* ── SCORE ── */
 #score-screen {
-  position: fixed; inset: 0; z-index: 200;
-  display: none; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: var(--bg); padding: 2rem;
-  text-align: center;
+  position: fixed; inset: 0; z-index: 200; display: none; flex-direction: column;
+  align-items: center; justify-content: center; background: var(--bg); padding: 2rem; text-align: center;
 }
-
-#score-screen::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(184,255,87,0.05) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.score-eyebrow {
-  font-size: 0.65rem;
-  letter-spacing: 0.25em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 1rem;
-}
-
-.score-num {
-  font-family: 'Unbounded', sans-serif;
-  font-size: clamp(3.5rem, 15vw, 6rem);
-  font-weight: 800;
-  color: var(--accent);
-  line-height: 1;
-  margin-bottom: 0.5rem;
-}
-
-.score-label {
-  font-size: 0.8rem; color: var(--muted);
-  margin-bottom: 2rem;
-}
-
-#score-breakdown {
-  width: 100%; max-width: 340px;
-  margin-bottom: 2rem;
-}
-
-.breakdown-row {
-  display: flex; justify-content: space-between;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.78rem;
-}
+#score-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(184,255,87,0.05) 0%, transparent 70%); pointer-events: none; }
+.score-eyebrow { font-size: 0.65rem; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
+.score-num { font-family: 'Unbounded', sans-serif; font-size: clamp(3.5rem,15vw,6rem); font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: 0.5rem; }
+.score-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 2rem; }
+#score-breakdown { width: 100%; max-width: 340px; margin-bottom: 2rem; }
+.breakdown-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
 .breakdown-row:last-child { border-bottom: none; }
-
 .breakdown-taste { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); }
 .breakdown-result { font-family: 'Unbounded', sans-serif; font-size: 0.7rem; font-weight: 600; }
-.ok { color: var(--accent); }
-.fail { color: var(--pungent); }
+.ok { color: var(--accent); } .fail { color: var(--pungent); }
 </style>
 </head>
 <body>
 
-<!-- ═══ START SCREEN ═════════════════════════════════════════════════════ -->
+<!-- ═══ START ═══════════════════════════════════════════════════════════ -->
 <div id="start-screen">
-  <div class="logo-wrap">
-    <span class="logo-main">Sensory</span><span class="logo-sub">AR</span>
-  </div>
+  <div class="logo-wrap"><span class="logo-main">Sensory</span><span class="logo-sub">AR</span></div>
+  <div class="version">v2 · Hand Tracking</div>
   <div class="tagline">Тренажёр панелиста · Quest 3</div>
+
+  <div class="hand-hint">
+    <strong>👋 Управление руками:</strong><br>
+    Наведи указательный палец на кнопку — она подсветится.<br>
+    Сделай <strong>щипок</strong> (pinch) большим и указательным — выбор.<br>
+    Контроллеры не нужны — руки свободны для стаканов!
+  </div>
 
   <div class="info-grid">
     <div class="info-cell"><strong>Режим</strong>Mixed Reality (AR)</div>
     <div class="info-cell"><strong>Сессия</strong>10 образцов, 5 вкусов</div>
-    <div class="info-cell"><strong>Метод</strong>Слепое идентифицирование</div>
+    <div class="info-cell"><strong>Ввод</strong>Hand Tracking (pinch)</div>
     <div class="info-cell"><strong>Уровень</strong>Базовые вкусы</div>
   </div>
 
   <button class="btn-primary" id="ar-btn">🥽 Войти в AR</button>
-  <button class="btn-secondary" id="demo-btn">🖥 Демо-режим (без гарнитуры)</button>
-  <div id="no-xr-msg">WebXR / immersive-ar не поддерживается.<br>Откройте файл в браузере Meta Quest 3.</div>
+  <button class="btn-secondary" id="demo-btn">🖥 Демо-режим (мышь/тач)</button>
+  <div id="no-xr-msg">WebXR / immersive-ar не поддерживается.<br>Откройте в браузере Meta Quest 3.</div>
 </div>
 
-<!-- ═══ AR / DEMO OVERLAY ════════════════════════════════════════════════ -->
+<!-- ═══ OVERLAY ══════════════════════════════════════════════════════════ -->
 <div id="overlay">
   <div id="top-bar">
     <div id="score-pill">✓ <span id="sc-ok">0</span> / <span id="sc-tot">0</span></div>
     <div id="sample-dots"></div>
-    <button id="exit-btn">✕ выйти</button>
+    <div id="hand-status">✋ руки не найдены</div>
+    <button id="exit-btn">✕</button>
   </div>
 
   <div id="task-card">
@@ -447,27 +206,15 @@ canvas { position: fixed; inset: 0; z-index: 0; }
 
   <div id="feedback-card">
     <div id="feedback-verdict"></div>
-    <div class="fb-row">
-      <span class="fb-label">Вещество</span>
-      <span class="fb-value fb-molecule" id="fb-mol"></span>
-    </div>
-    <div class="fb-row">
-      <span class="fb-label">Эталон</span>
-      <span class="fb-value" id="fb-ref"></span>
-    </div>
-    <div class="fb-row">
-      <span class="fb-label">Порог</span>
-      <span class="fb-value" id="fb-thr"></span>
-    </div>
-    <div class="fb-row">
-      <span class="fb-label">Профиль</span>
-      <span class="fb-value" id="fb-desc"></span>
-    </div>
+    <div class="fb-row"><span class="fb-label">Вещество</span><span class="fb-value fb-molecule" id="fb-mol"></span></div>
+    <div class="fb-row"><span class="fb-label">Эталон</span><span class="fb-value" id="fb-ref"></span></div>
+    <div class="fb-row"><span class="fb-label">Порог</span><span class="fb-value" id="fb-thr"></span></div>
+    <div class="fb-row"><span class="fb-label">Профиль</span><span class="fb-value" id="fb-desc"></span></div>
     <button id="btn-next">Следующий образец →</button>
   </div>
 </div>
 
-<!-- ═══ SCORE SCREEN ═════════════════════════════════════════════════════ -->
+<!-- ═══ SCORE ════════════════════════════════════════════════════════════ -->
 <div id="score-screen">
   <div class="score-eyebrow">Сессия завершена</div>
   <div class="score-num" id="sc-final">0/0</div>
@@ -476,336 +223,318 @@ canvas { position: fixed; inset: 0; z-index: 0; }
   <button class="btn-primary" id="restart-btn" style="max-width:340px">↺ Начать заново</button>
 </div>
 
-<!-- ═══ THREE.JS + WEBXR ═════════════════════════════════════════════════ -->
+<!-- ═══ THREE.JS + WEBXR HAND TRACKING ══════════════════════════════════ -->
 <script type="module">
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 
 // ── DATA ──────────────────────────────────────────────────────────────────
 const TASTES = [
-  {
-    id:'sweet', label:'Сладкий', emoji:'🍬', varName:'--sweet',
-    molecule:'Сахароза  C₁₂H₂₂O₁₁',
-    reference:'10 г/л в воде (водный р-р сахарозы)',
-    threshold:'0.5–2 г/л',
-    descriptor:'Чистый, приятный, без послевкусия. Рецепторы T1R2/T1R3.',
-    color: 0xff8cc8,
-  },
-  {
-    id:'salty', label:'Солёный', emoji:'🧂', varName:'--salty',
-    molecule:'Хлорид натрия  NaCl',
-    reference:'2 г/л в воде (физ. р-р × 0.35)',
-    threshold:'0.3–1 г/л',
-    descriptor:'Минеральный, усиливает другие вкусы. Na⁺ → ENaC-каналы.',
-    color: 0x57c8ff,
-  },
-  {
-    id:'bitter', label:'Горький', emoji:'☕', varName:'--bitter',
-    molecule:'Кофеин  C₈H₁₀N₄O₂',
-    reference:'0.5 г/л в воде',
-    threshold:'0.05–0.3 г/л',
-    descriptor:'Долгое послевкусие, развивается медленно. >25 типов TAS2R.',
-    color: 0xc8a857,
-  },
-  {
-    id:'umami', label:'Умами', emoji:'🍖', varName:'--umami',
-    molecule:'Глутамат Na  C₅H₈NNaO₄',
-    reference:'3 г/л в воде (MSG)',
-    threshold:'0.1–0.5 г/л',
-    descriptor:'Мясной, бульонный, обволакивающий. Синергист: ИМФ, ГМФ.',
-    color: 0xff7a57,
-  },
-  {
-    id:'pungent', label:'Острый', emoji:'🌶️', varName:'--pungent',
-    molecule:'Капсаицин  C₁₈H₂₇NO₃',
-    reference:'0.001 г/л в раст. масле',
-    threshold:'0.0003–0.001 г/л',
-    descriptor:'ТРИГЕМИНАЛЬНЫЙ (не вкус!). Жгучий. TRPV1. SHU ≈ 16 000 000.',
-    color: 0xff4d4d,
-  },
+  { id:'sweet',   label:'Сладкий', emoji:'🍬', molecule:'Сахароза  C₁₂H₂₂O₁₁',  reference:'10 г/л в воде', threshold:'0.5–2 г/л',   descriptor:'Чистый, приятный, без послевкусия. Рецепторы T1R2/T1R3.', color:0xff8cc8 },
+  { id:'salty',   label:'Солёный', emoji:'🧂', molecule:'Хлорид натрия  NaCl',    reference:'2 г/л в воде',  threshold:'0.3–1 г/л',   descriptor:'Минеральный, усиливает другие вкусы. Na⁺ → ENaC-каналы.', color:0x57c8ff },
+  { id:'bitter',  label:'Горький', emoji:'☕', molecule:'Кофеин  C₈H₁₀N₄O₂',     reference:'0.5 г/л в воде',threshold:'0.05–0.3 г/л', descriptor:'Долгое послевкусие, развивается медленно. >25 типов TAS2R.', color:0xc8a857 },
+  { id:'umami',   label:'Умами',   emoji:'🍖', molecule:'Глутамат Na  C₅H₈NNaO₄', reference:'3 г/л в воде',  threshold:'0.1–0.5 г/л', descriptor:'Мясной, бульонный, обволакивающий. Синергист: ИМФ, ГМФ.', color:0xff7a57 },
+  { id:'pungent', label:'Острый',  emoji:'🌶️',molecule:'Капсаицин  C₁₈H₂₇NO₃',  reference:'0.001 г/л масло',threshold:'0.0003 г/л', descriptor:'ТРИГЕМИНАЛЬНЫЙ. Жгучий. TRPV1. SHU ≈ 16 000 000.', color:0xff4d4d },
 ];
 
-// ── STATE ─────────────────────────────────────────────────────────────────
-let xrSession = null;
-let demoMode = false;
-let queue = [];
-let idx = 0;
-let correct = 0;
-let total = 0;
-let answered = false;
-let results = []; // {taste, userAnswer, ok}
+// ── HAND JOINT INDICES (WebXR) ─────────────────────────────────────────
+const WRIST=0, THUMB_TIP=4, INDEX_TIP=8, MIDDLE_TIP=12;
 
-// ── THREE.JS ─────────────────────────────────────────────────────────────
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 50);
+// ── STATE ──────────────────────────────────────────────────────────────
+let xrSession=null, demoMode=false;
+let queue=[], idx=0, correct=0, total=0, answered=false, results=[];
+let handsDetected=false;
+let hoveredBtn=null, dwellStart=0, dwellBtn=null;
+const DWELL_TIME=800; // ms hold to confirm (fallback, pinch is primary)
 
+// ── THREE.JS ──────────────────────────────────────────────────────────
+const scene    = new THREE.Scene();
+const camera   = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 50);
 const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(devicePixelRatio);
 renderer.xr.enabled = true;
-renderer.setClearColor(0x000000, 0); // transparent = passthrough in AR
+renderer.setClearColor(0x000000, 0);
 document.body.appendChild(renderer.domElement);
 
-window.addEventListener('resize', () => {
-  camera.aspect = innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+window.addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
 
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const dLight = new THREE.DirectionalLight(0xffffff, 0.8);
+scene.add(new THREE.AmbientLight(0xffffff,0.7));
+const dLight = new THREE.DirectionalLight(0xffffff,0.8);
 dLight.position.set(1,3,2); scene.add(dLight);
 
-// ── 3D MARKERS (3 cup positions on table) ─────────────────────────────────
-// In AR (local-floor): Y=0 is floor → table height ~0.78m
-// In Demo: placed at Z=-1.2 from camera
+// ── 3D CUP MARKERS ────────────────────────────────────────────────────
 const GROUP = new THREE.Group();
 scene.add(GROUP);
-
-const MARKER_OFFSETS = [
-  new THREE.Vector3(-0.28, 0, -0.55),
-  new THREE.Vector3(  0.0, 0, -0.55),
-  new THREE.Vector3( 0.28, 0, -0.55),
-];
-
+const MARKER_OFFSETS = [new THREE.Vector3(-0.28,0,-0.55), new THREE.Vector3(0,0,-0.55), new THREE.Vector3(0.28,0,-0.55)];
 const markerObjs = [];
 
-MARKER_OFFSETS.forEach((off, i) => {
-  const g = new THREE.Group();
-  g.position.copy(off);
-
-  // Subtle cup outline
-  const cupGeo = new THREE.CylinderGeometry(0.038, 0.028, 0.075, 20);
-  const cupMat = new THREE.MeshPhongMaterial({color:0xffffff, transparent:true, opacity:0.15, side:THREE.DoubleSide});
-  g.add(new THREE.Mesh(cupGeo, cupMat));
-
-  // Glowing ring above cup
-  const ringGeo = new THREE.TorusGeometry(0.05, 0.005, 8, 48);
-  const ringMat = new THREE.MeshPhongMaterial({color:0xa0a0a0, emissive:0x202020});
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.rotation.x = Math.PI/2; ring.position.y = 0.05;
-  g.add(ring);
-
-  // Floating orb
-  const orbGeo = new THREE.SphereGeometry(0.018, 16, 16);
-  const orbMat = new THREE.MeshPhongMaterial({color:0x888888, emissive:0x111111, transparent:true, opacity:0.85});
-  const orb = new THREE.Mesh(orbGeo, orbMat);
-  orb.position.y = 0.13;
-  g.add(orb);
-
+MARKER_OFFSETS.forEach((off,i)=>{
+  const g = new THREE.Group(); g.position.copy(off);
+  const cupGeo = new THREE.CylinderGeometry(0.038,0.028,0.075,20);
+  const cupMat = new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:0.15,side:THREE.DoubleSide});
+  g.add(new THREE.Mesh(cupGeo,cupMat));
+  const ringGeo = new THREE.TorusGeometry(0.05,0.005,8,48);
+  const ringMat = new THREE.MeshPhongMaterial({color:0xa0a0a0,emissive:0x202020});
+  const ring = new THREE.Mesh(ringGeo,ringMat); ring.rotation.x=Math.PI/2; ring.position.y=0.05; g.add(ring);
+  const orbGeo = new THREE.SphereGeometry(0.018,16,16);
+  const orbMat = new THREE.MeshPhongMaterial({color:0x888888,emissive:0x111111,transparent:true,opacity:0.85});
+  const orb = new THREE.Mesh(orbGeo,orbMat); orb.position.y=0.13; g.add(orb);
   GROUP.add(g);
-  markerObjs.push({ g, ring, ringMat, orb, orbMat });
+  markerObjs.push({g,ring,ringMat,orb,orbMat});
 });
 
-function highlightMarker(activeIdx) {
-  markerObjs.forEach((m, i) => {
-    const on = i === activeIdx;
-    m.ringMat.color.setHex(on ? 0xb8ff57 : 0x444444);
-    m.ringMat.emissive.setHex(on ? 0x405700 : 0x060606);
-    m.orbMat.color.setHex(on ? 0xb8ff57 : 0x888888);
-    m.orbMat.emissive.setHex(on ? 0x304000 : 0x111111);
-    m.g.scale.setScalar(on ? 1.25 : 1.0);
+function highlightMarker(ai){
+  markerObjs.forEach((m,i)=>{
+    const on=i===ai;
+    m.ringMat.color.setHex(on?0xb8ff57:0x444444);
+    m.ringMat.emissive.setHex(on?0x405700:0x060606);
+    m.orbMat.color.setHex(on?0xb8ff57:0x888888);
+    m.orbMat.emissive.setHex(on?0x304000:0x111111);
+    m.g.scale.setScalar(on?1.25:1.0);
   });
 }
 
-// ── ANIMATION ─────────────────────────────────────────────────────────────
+// ── HAND CURSOR (3D sphere for fingertip position) ────────────────────
+const cursorGeo = new THREE.SphereGeometry(0.012,12,12);
+const cursorMat = new THREE.MeshPhongMaterial({color:0xb8ff57,emissive:0x406000,transparent:true,opacity:0.85});
+const cursor3D  = new THREE.Mesh(cursorGeo,cursorMat);
+cursor3D.visible=false;
+scene.add(cursor3D);
+
+// Pinch ring (shows pinch proximity)
+const pinchGeo = new THREE.TorusGeometry(0.018,0.002,6,32);
+const pinchMat = new THREE.MeshPhongMaterial({color:0xb8ff57,emissive:0x406000,transparent:true,opacity:0});
+const pinchRing= new THREE.Mesh(pinchGeo,pinchMat);
+scene.add(pinchRing);
+
+// ── ANIMATION ─────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
-renderer.setAnimationLoop(() => {
+let lastPinchState = false;
+
+renderer.setAnimationLoop((time, xrFrame)=>{
   const t = clock.getElapsedTime();
-  markerObjs.forEach((m, i) => {
-    m.orb.position.y = 0.13 + Math.sin(t*1.4 + i*1.3)*0.012;
-    m.orb.rotation.y = t*0.6;
-  });
-  renderer.render(scene, camera);
+  markerObjs.forEach((m,i)=>{ m.orb.position.y=0.13+Math.sin(t*1.4+i*1.3)*0.012; m.orb.rotation.y=t*0.6; });
+
+  if(xrFrame && xrSession){
+    processHands(xrFrame, time);
+  }
+  renderer.render(scene,camera);
 });
 
-// ── SESSION LOGIC ──────────────────────────────────────────────────────────
-function buildDots(n) {
-  const el = document.getElementById('sample-dots');
-  el.innerHTML = '';
-  for (let i=0; i<n; i++) {
-    const d = document.createElement('div');
-    d.className = 's-dot'; d.id = `dot-${i}`;
-    el.appendChild(d);
+// ── HAND TRACKING CORE ────────────────────────────────────────────────
+function processHands(frame, time){
+  const refSpace = renderer.xr.getReferenceSpace();
+  if(!refSpace) return;
+
+  let anyHand=false;
+  for(const inputSource of xrSession.inputSources){
+    if(!inputSource.hand) continue;
+    anyHand=true;
+
+    const hand = inputSource.hand;
+    const indexTipJoint  = hand.get('index-finger-tip');
+    const thumbTipJoint  = hand.get('thumb-tip');
+    if(!indexTipJoint || !thumbTipJoint) continue;
+
+    const indexPose = frame.getJointPose(indexTipJoint, refSpace);
+    const thumbPose = frame.getJointPose(thumbTipJoint, refSpace);
+    if(!indexPose || !thumbPose) continue;
+
+    // Index tip position → 3D cursor
+    const ip = indexPose.transform.position;
+    cursor3D.position.set(ip.x, ip.y, ip.z);
+    cursor3D.visible=true;
+
+    // Thumb tip position
+    const tp = thumbPose.transform.position;
+    pinchRing.position.set((ip.x+tp.x)/2,(ip.y+tp.y)/2,(ip.z+tp.z)/2);
+
+    // Pinch distance
+    const dx=ip.x-tp.x, dy=ip.y-tp.y, dz=ip.z-tp.z;
+    const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const isPinching = dist < 0.025; // ~2.5 cm
+
+    // Pinch ring opacity = proximity
+    pinchMat.opacity = Math.max(0, Math.min(0.9, (0.06-dist)/0.04));
+    pinchRing.visible=true;
+
+    // Project index tip to screen → hover HTML buttons
+    const vec = new THREE.Vector3(ip.x,ip.y,ip.z);
+    vec.project(camera);
+    const sx = (vec.x*0.5+0.5)*window.innerWidth;
+    const sy = (-(vec.y)*0.5+0.5)*window.innerHeight;
+
+    updateHover(sx, sy);
+
+    // Pinch = click (rising edge only)
+    if(isPinching && !lastPinchState){
+      if(hoveredBtn && !hoveredBtn.disabled) hoveredBtn.click();
+    }
+    lastPinchState = isPinching;
+    break; // use first hand found
+  }
+
+  if(!anyHand){
+    cursor3D.visible=false;
+    pinchRing.visible=false;
+    if(handsDetected){ handsDetected=false; updateHandStatus(); }
+  } else {
+    if(!handsDetected){ handsDetected=true; updateHandStatus(); }
   }
 }
 
-function updateDots() {
-  for (let i=0; i<queue.length; i++) {
-    const d = document.getElementById(`dot-${i}`);
-    if (!d) continue;
-    d.className = 's-dot' + (i < idx ? ' done' : i === idx ? ' active' : '');
+function updateHandStatus(){
+  const el=document.getElementById('hand-status');
+  if(handsDetected){ el.textContent='✋ руки активны'; el.classList.add('active'); }
+  else              { el.textContent='✋ руки не найдены'; el.classList.remove('active'); }
+}
+
+// ── HOVER via finger position ─────────────────────────────────────────
+function updateHover(sx, sy){
+  const els = document.querySelectorAll('.t-btn:not(:disabled), #btn-next');
+  let found=null;
+  els.forEach(el=>{
+    const r=el.getBoundingClientRect();
+    if(sx>=r.left && sx<=r.right && sy>=r.top && sy<=r.bottom) found=el;
+  });
+
+  if(found !== hoveredBtn){
+    if(hoveredBtn){ hoveredBtn.classList.remove('hovered'); clearDwellBar(hoveredBtn); }
+    hoveredBtn=found;
+    if(hoveredBtn){ hoveredBtn.classList.add('hovered'); startDwellBar(hoveredBtn); }
   }
 }
 
-function buildButtons() {
-  const grid = document.getElementById('taste-grid');
-  grid.innerHTML = '';
-  TASTES.forEach((t, ti) => {
-    const btn = document.createElement('button');
-    btn.className = 'taste-btn t-btn' + (ti === 4 ? ' full' : '');
-    btn.dataset.id = t.id;
-    btn.innerHTML = `<span>${t.emoji}</span>${t.label}`;
-    btn.addEventListener('click', () => onAnswer(t.id));
+// Dwell bar (visual feedback while hovering)
+function startDwellBar(btn){
+  let bar = btn.querySelector('.dwell-bar');
+  if(!bar){ bar=document.createElement('div'); bar.className='dwell-bar'; btn.appendChild(bar); }
+  bar.style.transition='none'; bar.style.width='0%';
+  requestAnimationFrame(()=>{
+    bar.style.transition=`width ${DWELL_TIME}ms linear`;
+    bar.style.width='100%';
+  });
+}
+function clearDwellBar(btn){
+  const bar=btn.querySelector('.dwell-bar');
+  if(bar){ bar.style.transition='none'; bar.style.width='0%'; }
+  btn.classList.remove('hovered','pinching');
+}
+
+// ── SESSION LOGIC ─────────────────────────────────────────────────────
+function buildDots(n){
+  const el=document.getElementById('sample-dots'); el.innerHTML='';
+  for(let i=0;i<n;i++){ const d=document.createElement('div'); d.className='s-dot'; d.id=`dot-${i}`; el.appendChild(d); }
+}
+
+function updateDots(){
+  for(let i=0;i<queue.length;i++){
+    const d=document.getElementById(`dot-${i}`); if(!d) continue;
+    d.className='s-dot'+(i<idx?' done':i===idx?' active':'');
+  }
+}
+
+function buildButtons(){
+  const grid=document.getElementById('taste-grid'); grid.innerHTML='';
+  TASTES.forEach((t,ti)=>{
+    const btn=document.createElement('button');
+    btn.className='taste-btn t-btn'+(ti===4?' full':'');
+    btn.dataset.id=t.id;
+    btn.innerHTML=`<span>${t.emoji}</span>${t.label}<div class="dwell-bar"></div>`;
+    btn.addEventListener('click',()=>onAnswer(t.id));
     grid.appendChild(btn);
   });
 }
 
-function startSession() {
-  // 2 rounds = 10 samples, shuffled
-  queue = [...TASTES, ...TASTES].sort(() => Math.random()-0.5);
+function startSession(){
+  queue=[...TASTES,...TASTES].sort(()=>Math.random()-0.5);
   idx=0; correct=0; total=0; answered=false; results=[];
-
-  buildDots(queue.length);
-  buildButtons();
+  buildDots(queue.length); buildButtons();
   document.getElementById('overlay').classList.add('active');
-  document.getElementById('feedback-card').style.display = 'none';
-  document.getElementById('task-card').style.display = 'block';
-  document.getElementById('score-screen').style.display = 'none';
-
+  document.getElementById('feedback-card').style.display='none';
+  document.getElementById('task-card').style.display='block';
+  document.getElementById('score-screen').style.display='none';
   showSample();
 }
 
-function showSample() {
-  if (idx >= queue.length) { endSession(); return; }
-  answered = false;
-  const t = queue[idx];
+function showSample(){
+  if(idx>=queue.length){ endSession(); return; }
+  answered=false;
+  document.getElementById('smp-num').textContent=idx+1;
+  document.getElementById('feedback-card').style.display='none';
+  document.getElementById('task-card').style.display='block';
+  document.querySelectorAll('.t-btn').forEach(b=>{ b.classList.remove('correct','wrong','hovered'); b.disabled=false; clearDwellBar(b); });
+  highlightMarker(idx%3); updateDots(); updateScore();
+}
 
-  document.getElementById('smp-num').textContent = idx+1;
-  document.getElementById('feedback-card').style.display = 'none';
-  document.getElementById('task-card').style.display = 'block';
-
-  document.querySelectorAll('.t-btn').forEach(b => {
-    b.classList.remove('correct','wrong');
-    b.disabled = false;
-  });
-
-  highlightMarker(idx % 3);
-  updateDots();
+function onAnswer(answerId){
+  if(answered) return; answered=true;
+  const t=queue[idx]; const ok=answerId===t.id;
+  if(ok) correct++; total++;
+  results.push({taste:t,answer:answerId,ok});
+  document.querySelectorAll('.t-btn').forEach(b=>{ b.disabled=true; if(b.dataset.id===t.id) b.classList.add('correct'); else if(b.dataset.id===answerId&&!ok) b.classList.add('wrong'); });
+  document.getElementById('feedback-verdict').textContent=ok?`✓ Верно!  ${t.emoji} ${t.label}`:`✗ Неверно. Это  ${t.emoji} ${t.label}`;
+  document.getElementById('feedback-verdict').style.color=ok?'#b8ff57':'#ff4d4d';
+  document.getElementById('fb-mol').textContent=t.molecule;
+  document.getElementById('fb-ref').textContent=t.reference;
+  document.getElementById('fb-thr').textContent=t.threshold;
+  document.getElementById('fb-desc').textContent=t.descriptor;
+  document.getElementById('feedback-card').style.display='block';
   updateScore();
 }
 
-function onAnswer(answerId) {
-  if (answered) return;
-  answered = true;
+function updateScore(){ document.getElementById('sc-ok').textContent=correct; document.getElementById('sc-tot').textContent=total; }
 
-  const t = queue[idx];
-  const ok = answerId === t.id;
-  if (ok) correct++;
-  total++;
-  results.push({taste: t, answer: answerId, ok});
-
-  document.querySelectorAll('.t-btn').forEach(b => {
-    b.disabled = true;
-    if (b.dataset.id === t.id) b.classList.add('correct');
-    else if (b.dataset.id === answerId && !ok) b.classList.add('wrong');
-  });
-
-  // Feedback
-  document.getElementById('feedback-verdict').textContent =
-    ok ? `✓ Верно!  ${t.emoji} ${t.label}` : `✗ Неверно. Это  ${t.emoji} ${t.label}`;
-  document.getElementById('feedback-verdict').style.color = ok ? '#b8ff57' : '#ff4d4d';
-  document.getElementById('fb-mol').textContent  = t.molecule;
-  document.getElementById('fb-ref').textContent  = t.reference;
-  document.getElementById('fb-thr').textContent  = t.threshold;
-  document.getElementById('fb-desc').textContent = t.descriptor;
-  document.getElementById('feedback-card').style.display = 'block';
-
-  updateScore();
-}
-
-function updateScore() {
-  document.getElementById('sc-ok').textContent  = correct;
-  document.getElementById('sc-tot').textContent = total;
-}
-
-function endSession() {
+function endSession(){
   document.getElementById('overlay').classList.remove('active');
-
-  const pct = total ? Math.round(correct/total*100) : 0;
-  document.getElementById('sc-final').textContent = `${correct}/${total}`;
-  document.getElementById('sc-pct').textContent   =
-    pct>=90 ? `${pct}% — Отличный результат! Вы готовы к панельным испытаниям.`
-    : pct>=70 ? `${pct}% — Хорошо. Повторите горький и умами.`
-    : `${pct}% — Требуется дополнительная практика.`;
-
-  // Breakdown per taste
-  const bd = document.getElementById('score-breakdown');
-  bd.innerHTML = '';
-  TASTES.forEach(t => {
-    const relevant = results.filter(r => r.taste.id === t.id);
-    const okN = relevant.filter(r=>r.ok).length;
-    const row = document.createElement('div');
-    row.className = 'breakdown-row';
-    row.innerHTML = `
-      <span class="breakdown-taste">${t.emoji} ${t.label}</span>
-      <span class="breakdown-result ${okN === relevant.length ? 'ok' : 'fail'}">
-        ${okN}/${relevant.length}
-      </span>`;
-    bd.appendChild(row);
-  });
-
-  document.getElementById('score-screen').style.display = 'flex';
-  if (xrSession) { xrSession.end(); xrSession = null; }
+  const pct=total?Math.round(correct/total*100):0;
+  document.getElementById('sc-final').textContent=`${correct}/${total}`;
+  document.getElementById('sc-pct').textContent=pct>=90?`${pct}% — Отличный результат!`:pct>=70?`${pct}% — Хорошо. Повторите слабые позиции.`:`${pct}% — Требуется дополнительная практика.`;
+  const bd=document.getElementById('score-breakdown'); bd.innerHTML='';
+  TASTES.forEach(t=>{ const rel=results.filter(r=>r.taste.id===t.id); const okN=rel.filter(r=>r.ok).length; const row=document.createElement('div'); row.className='breakdown-row'; row.innerHTML=`<span class="breakdown-taste">${t.emoji} ${t.label}</span><span class="breakdown-result ${okN===rel.length?'ok':'fail'}">${okN}/${rel.length}</span>`; bd.appendChild(row); });
+  document.getElementById('score-screen').style.display='flex';
+  if(xrSession){ xrSession.end(); xrSession=null; }
 }
 
-// ── AR ENTRY ──────────────────────────────────────────────────────────────
-document.getElementById('ar-btn').addEventListener('click', async () => {
-  if (!navigator.xr) {
-    document.getElementById('no-xr-msg').style.display = 'block'; return;
-  }
-  const supported = await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
-  if (!supported) {
-    document.getElementById('no-xr-msg').style.display = 'block'; return;
-  }
+// ── AR ENTRY ──────────────────────────────────────────────────────────
+document.getElementById('ar-btn').addEventListener('click', async()=>{
+  if(!navigator.xr){ document.getElementById('no-xr-msg').style.display='block'; return; }
+  const supported=await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
+  if(!supported){ document.getElementById('no-xr-msg').style.display='block'; return; }
   try {
-    xrSession = await navigator.xr.requestSession('immersive-ar', {
-      requiredFeatures: ['local-floor'],
-      optionalFeatures: ['dom-overlay'],
-      domOverlay: { root: document.getElementById('overlay') }
+    xrSession=await navigator.xr.requestSession('immersive-ar',{
+      requiredFeatures:['local-floor','hand-tracking'],
+      optionalFeatures:['dom-overlay'],
+      domOverlay:{root:document.getElementById('overlay')}
     });
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(xrSession);
-
-    // Table height offset for AR
-    GROUP.position.set(0, 0.78, 0);
-
-    document.getElementById('start-screen').style.display = 'none';
+    GROUP.position.set(0,0.78,0);
+    document.getElementById('start-screen').style.display='none';
     startSession();
-
-    xrSession.addEventListener('end', () => {
-      document.getElementById('start-screen').style.display = 'flex';
-      document.getElementById('overlay').classList.remove('active');
-      xrSession = null;
-    });
-  } catch(e) {
-    alert('Ошибка AR: ' + e.message);
-  }
+    xrSession.addEventListener('end',()=>{ document.getElementById('start-screen').style.display='flex'; document.getElementById('overlay').classList.remove('active'); xrSession=null; });
+  } catch(e){ alert('Ошибка AR: '+e.message); }
 });
 
-// ── DEMO MODE ─────────────────────────────────────────────────────────────
-document.getElementById('demo-btn').addEventListener('click', () => {
-  demoMode = true;
-  GROUP.position.set(0, -0.3, -1.2);
-  camera.position.set(0,0,0);
-  document.getElementById('start-screen').style.display = 'none';
+// ── DEMO MODE ─────────────────────────────────────────────────────────
+document.getElementById('demo-btn').addEventListener('click',()=>{
+  demoMode=true;
+  GROUP.position.set(0,-0.3,-1.2);
+  document.getElementById('start-screen').style.display='none';
+  document.getElementById('hand-status').style.display='none';
   startSession();
 });
 
-// ── CONTROLS ──────────────────────────────────────────────────────────────
-document.getElementById('btn-next').addEventListener('click', () => { idx++; showSample(); });
+// ── CONTROLS ──────────────────────────────────────────────────────────
+document.getElementById('btn-next').addEventListener('click',()=>{ idx++; showSample(); });
 document.getElementById('exit-btn').addEventListener('click', endSession);
-document.getElementById('restart-btn').addEventListener('click', () => {
-  document.getElementById('score-screen').style.display = 'none';
-  if (demoMode) startSession();
-  else document.getElementById('start-screen').style.display = 'flex';
+document.getElementById('restart-btn').addEventListener('click',()=>{
+  document.getElementById('score-screen').style.display='none';
+  if(demoMode) startSession(); else document.getElementById('start-screen').style.display='flex';
 });
 
-// ── CHECK XR ON LOAD ──────────────────────────────────────────────────────
-if (!navigator.xr) {
-  const b = document.getElementById('ar-btn');
-  b.disabled = true; b.textContent = '🥽 WebXR недоступен';
-}
+// ── XR CHECK ──────────────────────────────────────────────────────────
+if(!navigator.xr){ const b=document.getElementById('ar-btn'); b.disabled=true; b.textContent='🥽 WebXR недоступен'; }
 </script>
 </body>
 </html>
