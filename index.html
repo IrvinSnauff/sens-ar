@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SensoryAR — Тренажёр дегустатора</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Unbounded:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04040c;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --accent: #b8ff57;
+  --accent2: #57c8ff;
+  --text: #f0f0f0;
+  --muted: #666;
+  --sweet: #ff8cc8;
+  --salty: #57c8ff;
+  --bitter: #c8a857;
+  --umami: #ff7a57;
+  --pungent: #ff4d4d;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Space Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+canvas { position: fixed; inset: 0; z-index: 0; }
+
+/* ─── START SCREEN ─── */
+#start-screen {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2rem;
+  background: var(--bg);
+}
+
+#start-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(184,255,87,0.06) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(87,200,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.logo-wrap {
+  display: flex; align-items: baseline; gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.logo-main {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.2rem, 8vw, 3.5rem);
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+
+.logo-sub {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 300;
+  font-size: clamp(2.2rem, 8vw, 3.5rem);
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 2.5rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 2.5rem;
+}
+
+.info-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.info-cell strong { color: var(--text); display: block; margin-bottom: 0.1rem; }
+
+.btn-primary {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  background: var(--accent);
+  color: #04040c;
+  border: none;
+  border-radius: 50px;
+  padding: 1rem 2.5rem;
+  cursor: pointer;
+  width: 100%; max-width: 360px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(184,255,87,0.3); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-secondary {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 50px;
+  padding: 0.75rem 2rem;
+  cursor: pointer;
+  width: 100%; max-width: 360px;
+  margin-top: 0.75rem;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-secondary:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+
+#no-xr-msg {
+  font-size: 0.72rem;
+  color: var(--pungent);
+  margin-top: 1rem;
+  text-align: center;
+  display: none;
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+/* ─── OVERLAY (shown in AR/Demo) ─── */
+#overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: none;
+  pointer-events: none;
+}
+#overlay.active { display: block; }
+
+/* Top bar */
+#top-bar {
+  position: absolute;
+  top: 20px; left: 20px; right: 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  pointer-events: all;
+}
+
+#score-pill {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(4,4,12,0.85);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 0.5rem 1.2rem;
+  color: var(--accent);
+  backdrop-filter: blur(10px);
+}
+
+#exit-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  background: rgba(4,4,12,0.85);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 50px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: color 0.2s;
+}
+#exit-btn:hover { color: var(--text); }
+
+/* Sample indicators (top center) */
+#sample-dots {
+  position: absolute;
+  top: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px;
+  pointer-events: none;
+}
+
+.s-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.s-dot.done { background: var(--muted); }
+.s-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+/* Main bottom card */
+#task-card {
+  position: absolute;
+  bottom: 30px; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 40px); max-width: 400px;
+  background: rgba(4,4,12,0.9);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  pointer-events: all;
+  backdrop-filter: blur(16px);
+}
+
+.card-eyebrow {
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.sample-badge {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent2);
+  background: rgba(87,200,255,0.1);
+  border: 1px solid rgba(87,200,255,0.2);
+  border-radius: 20px;
+  padding: 0.2rem 0.6rem;
+}
+
+.card-question {
+  font-family: 'Unbounded', sans-serif;
+  font-weight: 300;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--text);
+  margin-bottom: 1.2rem;
+}
+
+.taste-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.t-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.65rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+
+.t-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+
+.t-btn.full { grid-column: 1 / -1; }
+.t-btn:disabled { cursor: default; }
+
+.t-btn.correct {
+  background: rgba(184,255,87,0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.t-btn.wrong {
+  background: rgba(255,77,77,0.12);
+  border-color: var(--pungent);
+  color: var(--pungent);
+}
+
+/* Feedback card (slides in from top) */
+#feedback-card {
+  position: absolute;
+  top: 80px; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 40px); max-width: 400px;
+  background: rgba(4,4,12,0.92);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  pointer-events: all;
+  backdrop-filter: blur(16px);
+  display: none;
+}
+
+#feedback-verdict {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+}
+
+.fb-row {
+  display: flex; align-items: baseline; gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.fb-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 70px;
+}
+
+.fb-value {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.fb-molecule {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+#btn-next {
+  margin-top: 1.2rem;
+  width: 100%;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #04040c;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: opacity 0.2s;
+}
+#btn-next:hover { opacity: 0.85; }
+
+/* ─── SCORE SCREEN ─── */
+#score-screen {
+  position: fixed; inset: 0; z-index: 200;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--bg); padding: 2rem;
+  text-align: center;
+}
+
+#score-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(184,255,87,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.score-eyebrow {
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.score-num {
+  font-family: 'Unbounded', sans-serif;
+  font-size: clamp(3.5rem, 15vw, 6rem);
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.score-label {
+  font-size: 0.8rem; color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+#score-breakdown {
+  width: 100%; max-width: 340px;
+  margin-bottom: 2rem;
+}
+
+.breakdown-row {
+  display: flex; justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+.breakdown-row:last-child { border-bottom: none; }
+
+.breakdown-taste { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); }
+.breakdown-result { font-family: 'Unbounded', sans-serif; font-size: 0.7rem; font-weight: 600; }
+.ok { color: var(--accent); }
+.fail { color: var(--pungent); }
+</style>
+</head>
+<body>
+
+<!-- ═══ START SCREEN ═════════════════════════════════════════════════════ -->
+<div id="start-screen">
+  <div class="logo-wrap">
+    <span class="logo-main">Sensory</span><span class="logo-sub">AR</span>
+  </div>
+  <div class="tagline">Тренажёр панелиста · Quest 3</div>
+
+  <div class="info-grid">
+    <div class="info-cell"><strong>Режим</strong>Mixed Reality (AR)</div>
+    <div class="info-cell"><strong>Сессия</strong>10 образцов, 5 вкусов</div>
+    <div class="info-cell"><strong>Метод</strong>Слепое идентифицирование</div>
+    <div class="info-cell"><strong>Уровень</strong>Базовые вкусы</div>
+  </div>
+
+  <button class="btn-primary" id="ar-btn">🥽 Войти в AR</button>
+  <button class="btn-secondary" id="demo-btn">🖥 Демо-режим (без гарнитуры)</button>
+  <div id="no-xr-msg">WebXR / immersive-ar не поддерживается.<br>Откройте файл в браузере Meta Quest 3.</div>
+</div>
+
+<!-- ═══ AR / DEMO OVERLAY ════════════════════════════════════════════════ -->
+<div id="overlay">
+  <div id="top-bar">
+    <div id="score-pill">✓ <span id="sc-ok">0</span> / <span id="sc-tot">0</span></div>
+    <div id="sample-dots"></div>
+    <button id="exit-btn">✕ выйти</button>
+  </div>
+
+  <div id="task-card">
+    <div class="card-eyebrow">
+      Определите вкус
+      <div class="sample-badge">образец #<span id="smp-num">1</span></div>
+    </div>
+    <div class="card-question">Попробуйте образец.<br>Что вы ощущаете?</div>
+    <div class="taste-grid" id="taste-grid"></div>
+  </div>
+
+  <div id="feedback-card">
+    <div id="feedback-verdict"></div>
+    <div class="fb-row">
+      <span class="fb-label">Вещество</span>
+      <span class="fb-value fb-molecule" id="fb-mol"></span>
+    </div>
+    <div class="fb-row">
+      <span class="fb-label">Эталон</span>
+      <span class="fb-value" id="fb-ref"></span>
+    </div>
+    <div class="fb-row">
+      <span class="fb-label">Порог</span>
+      <span class="fb-value" id="fb-thr"></span>
+    </div>
+    <div class="fb-row">
+      <span class="fb-label">Профиль</span>
+      <span class="fb-value" id="fb-desc"></span>
+    </div>
+    <button id="btn-next">Следующий образец →</button>
+  </div>
+</div>
+
+<!-- ═══ SCORE SCREEN ═════════════════════════════════════════════════════ -->
+<div id="score-screen">
+  <div class="score-eyebrow">Сессия завершена</div>
+  <div class="score-num" id="sc-final">0/0</div>
+  <div class="score-label" id="sc-pct"></div>
+  <div id="score-breakdown"></div>
+  <button class="btn-primary" id="restart-btn" style="max-width:340px">↺ Начать заново</button>
+</div>
+
+<!-- ═══ THREE.JS + WEBXR ═════════════════════════════════════════════════ -->
+<script type="module">
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+
+// ── DATA ──────────────────────────────────────────────────────────────────
+const TASTES = [
+  {
+    id:'sweet', label:'Сладкий', emoji:'🍬', varName:'--sweet',
+    molecule:'Сахароза  C₁₂H₂₂O₁₁',
+    reference:'10 г/л в воде (водный р-р сахарозы)',
+    threshold:'0.5–2 г/л',
+    descriptor:'Чистый, приятный, без послевкусия. Рецепторы T1R2/T1R3.',
+    color: 0xff8cc8,
+  },
+  {
+    id:'salty', label:'Солёный', emoji:'🧂', varName:'--salty',
+    molecule:'Хлорид натрия  NaCl',
+    reference:'2 г/л в воде (физ. р-р × 0.35)',
+    threshold:'0.3–1 г/л',
+    descriptor:'Минеральный, усиливает другие вкусы. Na⁺ → ENaC-каналы.',
+    color: 0x57c8ff,
+  },
+  {
+    id:'bitter', label:'Горький', emoji:'☕', varName:'--bitter',
+    molecule:'Кофеин  C₈H₁₀N₄O₂',
+    reference:'0.5 г/л в воде',
+    threshold:'0.05–0.3 г/л',
+    descriptor:'Долгое послевкусие, развивается медленно. >25 типов TAS2R.',
+    color: 0xc8a857,
+  },
+  {
+    id:'umami', label:'Умами', emoji:'🍖', varName:'--umami',
+    molecule:'Глутамат Na  C₅H₈NNaO₄',
+    reference:'3 г/л в воде (MSG)',
+    threshold:'0.1–0.5 г/л',
+    descriptor:'Мясной, бульонный, обволакивающий. Синергист: ИМФ, ГМФ.',
+    color: 0xff7a57,
+  },
+  {
+    id:'pungent', label:'Острый', emoji:'🌶️', varName:'--pungent',
+    molecule:'Капсаицин  C₁₈H₂₇NO₃',
+    reference:'0.001 г/л в раст. масле',
+    threshold:'0.0003–0.001 г/л',
+    descriptor:'ТРИГЕМИНАЛЬНЫЙ (не вкус!). Жгучий. TRPV1. SHU ≈ 16 000 000.',
+    color: 0xff4d4d,
+  },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let xrSession = null;
+let demoMode = false;
+let queue = [];
+let idx = 0;
+let correct = 0;
+let total = 0;
+let answered = false;
+let results = []; // {taste, userAnswer, ok}
+
+// ── THREE.JS ─────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 50);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.xr.enabled = true;
+renderer.setClearColor(0x000000, 0); // transparent = passthrough in AR
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dLight.position.set(1,3,2); scene.add(dLight);
+
+// ── 3D MARKERS (3 cup positions on table) ─────────────────────────────────
+// In AR (local-floor): Y=0 is floor → table height ~0.78m
+// In Demo: placed at Z=-1.2 from camera
+const GROUP = new THREE.Group();
+scene.add(GROUP);
+
+const MARKER_OFFSETS = [
+  new THREE.Vector3(-0.28, 0, -0.55),
+  new THREE.Vector3(  0.0, 0, -0.55),
+  new THREE.Vector3( 0.28, 0, -0.55),
+];
+
+const markerObjs = [];
+
+MARKER_OFFSETS.forEach((off, i) => {
+  const g = new THREE.Group();
+  g.position.copy(off);
+
+  // Subtle cup outline
+  const cupGeo = new THREE.CylinderGeometry(0.038, 0.028, 0.075, 20);
+  const cupMat = new THREE.MeshPhongMaterial({color:0xffffff, transparent:true, opacity:0.15, side:THREE.DoubleSide});
+  g.add(new THREE.Mesh(cupGeo, cupMat));
+
+  // Glowing ring above cup
+  const ringGeo = new THREE.TorusGeometry(0.05, 0.005, 8, 48);
+  const ringMat = new THREE.MeshPhongMaterial({color:0xa0a0a0, emissive:0x202020});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2; ring.position.y = 0.05;
+  g.add(ring);
+
+  // Floating orb
+  const orbGeo = new THREE.SphereGeometry(0.018, 16, 16);
+  const orbMat = new THREE.MeshPhongMaterial({color:0x888888, emissive:0x111111, transparent:true, opacity:0.85});
+  const orb = new THREE.Mesh(orbGeo, orbMat);
+  orb.position.y = 0.13;
+  g.add(orb);
+
+  GROUP.add(g);
+  markerObjs.push({ g, ring, ringMat, orb, orbMat });
+});
+
+function highlightMarker(activeIdx) {
+  markerObjs.forEach((m, i) => {
+    const on = i === activeIdx;
+    m.ringMat.color.setHex(on ? 0xb8ff57 : 0x444444);
+    m.ringMat.emissive.setHex(on ? 0x405700 : 0x060606);
+    m.orbMat.color.setHex(on ? 0xb8ff57 : 0x888888);
+    m.orbMat.emissive.setHex(on ? 0x304000 : 0x111111);
+    m.g.scale.setScalar(on ? 1.25 : 1.0);
+  });
+}
+
+// ── ANIMATION ─────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const t = clock.getElapsedTime();
+  markerObjs.forEach((m, i) => {
+    m.orb.position.y = 0.13 + Math.sin(t*1.4 + i*1.3)*0.012;
+    m.orb.rotation.y = t*0.6;
+  });
+  renderer.render(scene, camera);
+});
+
+// ── SESSION LOGIC ──────────────────────────────────────────────────────────
+function buildDots(n) {
+  const el = document.getElementById('sample-dots');
+  el.innerHTML = '';
+  for (let i=0; i<n; i++) {
+    const d = document.createElement('div');
+    d.className = 's-dot'; d.id = `dot-${i}`;
+    el.appendChild(d);
+  }
+}
+
+function updateDots() {
+  for (let i=0; i<queue.length; i++) {
+    const d = document.getElementById(`dot-${i}`);
+    if (!d) continue;
+    d.className = 's-dot' + (i < idx ? ' done' : i === idx ? ' active' : '');
+  }
+}
+
+function buildButtons() {
+  const grid = document.getElementById('taste-grid');
+  grid.innerHTML = '';
+  TASTES.forEach((t, ti) => {
+    const btn = document.createElement('button');
+    btn.className = 'taste-btn t-btn' + (ti === 4 ? ' full' : '');
+    btn.dataset.id = t.id;
+    btn.innerHTML = `<span>${t.emoji}</span>${t.label}`;
+    btn.addEventListener('click', () => onAnswer(t.id));
+    grid.appendChild(btn);
+  });
+}
+
+function startSession() {
+  // 2 rounds = 10 samples, shuffled
+  queue = [...TASTES, ...TASTES].sort(() => Math.random()-0.5);
+  idx=0; correct=0; total=0; answered=false; results=[];
+
+  buildDots(queue.length);
+  buildButtons();
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById('feedback-card').style.display = 'none';
+  document.getElementById('task-card').style.display = 'block';
+  document.getElementById('score-screen').style.display = 'none';
+
+  showSample();
+}
+
+function showSample() {
+  if (idx >= queue.length) { endSession(); return; }
+  answered = false;
+  const t = queue[idx];
+
+  document.getElementById('smp-num').textContent = idx+1;
+  document.getElementById('feedback-card').style.display = 'none';
+  document.getElementById('task-card').style.display = 'block';
+
+  document.querySelectorAll('.t-btn').forEach(b => {
+    b.classList.remove('correct','wrong');
+    b.disabled = false;
+  });
+
+  highlightMarker(idx % 3);
+  updateDots();
+  updateScore();
+}
+
+function onAnswer(answerId) {
+  if (answered) return;
+  answered = true;
+
+  const t = queue[idx];
+  const ok = answerId === t.id;
+  if (ok) correct++;
+  total++;
+  results.push({taste: t, answer: answerId, ok});
+
+  document.querySelectorAll('.t-btn').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.id === t.id) b.classList.add('correct');
+    else if (b.dataset.id === answerId && !ok) b.classList.add('wrong');
+  });
+
+  // Feedback
+  document.getElementById('feedback-verdict').textContent =
+    ok ? `✓ Верно!  ${t.emoji} ${t.label}` : `✗ Неверно. Это  ${t.emoji} ${t.label}`;
+  document.getElementById('feedback-verdict').style.color = ok ? '#b8ff57' : '#ff4d4d';
+  document.getElementById('fb-mol').textContent  = t.molecule;
+  document.getElementById('fb-ref').textContent  = t.reference;
+  document.getElementById('fb-thr').textContent  = t.threshold;
+  document.getElementById('fb-desc').textContent = t.descriptor;
+  document.getElementById('feedback-card').style.display = 'block';
+
+  updateScore();
+}
+
+function updateScore() {
+  document.getElementById('sc-ok').textContent  = correct;
+  document.getElementById('sc-tot').textContent = total;
+}
+
+function endSession() {
+  document.getElementById('overlay').classList.remove('active');
+
+  const pct = total ? Math.round(correct/total*100) : 0;
+  document.getElementById('sc-final').textContent = `${correct}/${total}`;
+  document.getElementById('sc-pct').textContent   =
+    pct>=90 ? `${pct}% — Отличный результат! Вы готовы к панельным испытаниям.`
+    : pct>=70 ? `${pct}% — Хорошо. Повторите горький и умами.`
+    : `${pct}% — Требуется дополнительная практика.`;
+
+  // Breakdown per taste
+  const bd = document.getElementById('score-breakdown');
+  bd.innerHTML = '';
+  TASTES.forEach(t => {
+    const relevant = results.filter(r => r.taste.id === t.id);
+    const okN = relevant.filter(r=>r.ok).length;
+    const row = document.createElement('div');
+    row.className = 'breakdown-row';
+    row.innerHTML = `
+      <span class="breakdown-taste">${t.emoji} ${t.label}</span>
+      <span class="breakdown-result ${okN === relevant.length ? 'ok' : 'fail'}">
+        ${okN}/${relevant.length}
+      </span>`;
+    bd.appendChild(row);
+  });
+
+  document.getElementById('score-screen').style.display = 'flex';
+  if (xrSession) { xrSession.end(); xrSession = null; }
+}
+
+// ── AR ENTRY ──────────────────────────────────────────────────────────────
+document.getElementById('ar-btn').addEventListener('click', async () => {
+  if (!navigator.xr) {
+    document.getElementById('no-xr-msg').style.display = 'block'; return;
+  }
+  const supported = await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
+  if (!supported) {
+    document.getElementById('no-xr-msg').style.display = 'block'; return;
+  }
+  try {
+    xrSession = await navigator.xr.requestSession('immersive-ar', {
+      requiredFeatures: ['local-floor'],
+      optionalFeatures: ['dom-overlay'],
+      domOverlay: { root: document.getElementById('overlay') }
+    });
+    renderer.xr.setReferenceSpaceType('local-floor');
+    await renderer.xr.setSession(xrSession);
+
+    // Table height offset for AR
+    GROUP.position.set(0, 0.78, 0);
+
+    document.getElementById('start-screen').style.display = 'none';
+    startSession();
+
+    xrSession.addEventListener('end', () => {
+      document.getElementById('start-screen').style.display = 'flex';
+      document.getElementById('overlay').classList.remove('active');
+      xrSession = null;
+    });
+  } catch(e) {
+    alert('Ошибка AR: ' + e.message);
+  }
+});
+
+// ── DEMO MODE ─────────────────────────────────────────────────────────────
+document.getElementById('demo-btn').addEventListener('click', () => {
+  demoMode = true;
+  GROUP.position.set(0, -0.3, -1.2);
+  camera.position.set(0,0,0);
+  document.getElementById('start-screen').style.display = 'none';
+  startSession();
+});
+
+// ── CONTROLS ──────────────────────────────────────────────────────────────
+document.getElementById('btn-next').addEventListener('click', () => { idx++; showSample(); });
+document.getElementById('exit-btn').addEventListener('click', endSession);
+document.getElementById('restart-btn').addEventListener('click', () => {
+  document.getElementById('score-screen').style.display = 'none';
+  if (demoMode) startSession();
+  else document.getElementById('start-screen').style.display = 'flex';
+});
+
+// ── CHECK XR ON LOAD ──────────────────────────────────────────────────────
+if (!navigator.xr) {
+  const b = document.getElementById('ar-btn');
+  b.disabled = true; b.textContent = '🥽 WebXR недоступен';
+}
+</script>
+</body>
+</html>
