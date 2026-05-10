@@ -315,6 +315,21 @@ renderer.setAnimationLoop((time, xrFrame)=>{
   const t = clock.getElapsedTime();
   markerObjs.forEach((m,i)=>{ m.orb.position.y=0.13+Math.sin(t*1.4+i*1.3)*0.012; m.orb.rotation.y=t*0.6; });
 
+  // Position cups relative to XR camera (reliable on any floor calibration)
+  if(xrSession){
+    const xrCam = renderer.xr.getCamera(camera);
+    const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion);
+    forward.y = 0; forward.normalize();
+    // Place 0.7m in front, 0.35m below eye level
+    GROUP.position.set(
+      xrCam.position.x + forward.x * 0.7,
+      xrCam.position.y - 0.35,
+      xrCam.position.z + forward.z * 0.7
+    );
+    GROUP.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),
+      Math.atan2(forward.x, forward.z));
+  }
+
   if(xrFrame && xrSession){
     processHands(xrFrame, time);
   }
@@ -503,13 +518,12 @@ document.getElementById('ar-btn').addEventListener('click', async()=>{
   if(!supported){ document.getElementById('no-xr-msg').style.display='block'; return; }
   try {
     xrSession=await navigator.xr.requestSession('immersive-ar',{
-      requiredFeatures:['local-floor','hand-tracking'],
-      optionalFeatures:['dom-overlay'],
+      requiredFeatures:['local-floor'],
+      optionalFeatures:['hand-tracking','dom-overlay'],
       domOverlay:{root:document.getElementById('overlay')}
     });
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(xrSession);
-    GROUP.position.set(0,0.78,0);
     document.getElementById('start-screen').style.display='none';
     startSession();
     xrSession.addEventListener('end',()=>{ document.getElementById('start-screen').style.display='flex'; document.getElementById('overlay').classList.remove('active'); xrSession=null; });
