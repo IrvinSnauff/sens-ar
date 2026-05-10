@@ -373,9 +373,10 @@ function processHands(frame, time){
     pinchMat.opacity = Math.max(0, Math.min(0.9, (0.06-dist)/0.04));
     pinchRing.visible=true;
 
-    // Project index tip to screen → hover HTML buttons
+    // Project index tip to screen using XR camera
+    const xrCam = renderer.xr.getCamera(camera);
     const vec = new THREE.Vector3(ip.x,ip.y,ip.z);
-    vec.project(camera);
+    vec.project(xrCam);
     const sx = (vec.x*0.5+0.5)*window.innerWidth;
     const sy = (-(vec.y)*0.5+0.5)*window.innerHeight;
 
@@ -517,6 +518,10 @@ document.getElementById('ar-btn').addEventListener('click', async()=>{
   const supported=await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
   if(!supported){ document.getElementById('no-xr-msg').style.display='block'; return; }
   try {
+    // DOM overlay root must be visible BEFORE session request
+    document.getElementById('start-screen').style.display='none';
+    document.getElementById('overlay').classList.add('active');
+
     xrSession=await navigator.xr.requestSession('immersive-ar',{
       requiredFeatures:['local-floor'],
       optionalFeatures:['hand-tracking','dom-overlay'],
@@ -524,9 +529,12 @@ document.getElementById('ar-btn').addEventListener('click', async()=>{
     });
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(xrSession);
-    document.getElementById('start-screen').style.display='none';
     startSession();
-    xrSession.addEventListener('end',()=>{ document.getElementById('start-screen').style.display='flex'; document.getElementById('overlay').classList.remove('active'); xrSession=null; });
+    xrSession.addEventListener('end',()=>{
+      document.getElementById('start-screen').style.display='flex';
+      document.getElementById('overlay').classList.remove('active');
+      xrSession=null;
+    });
   } catch(e){ alert('Ошибка AR: '+e.message); }
 });
 
