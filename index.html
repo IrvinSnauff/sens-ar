@@ -3,35 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SensoryAR v7</title>
+<title>SensoryAR v9</title>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { background:#04040c; color:#f0f0f0; font-family:'Space Mono',monospace; height:100dvh; overflow:hidden; }
-.screen { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem; background:#04040c; }
-h1 { font-size:2.2rem; color:#b8ff57; margin-bottom:.3rem; }
-.sub { font-size:.6rem; letter-spacing:.2em; color:#57c8ff; text-transform:uppercase; margin-bottom:1.2rem; }
-.hint { width:100%; max-width:340px; margin-bottom:1.2rem; background:rgba(184,255,87,.05); border:1px solid rgba(184,255,87,.2); border-radius:12px; padding:.85rem 1rem; font-size:.7rem; line-height:1.8; color:#bbb; }
-.hint strong { color:#b8ff57; }
-.bp { font-weight:700; font-size:.82rem; background:#b8ff57; color:#04040c; border:none; border-radius:50px; padding:.9rem 2rem; cursor:pointer; width:100%; max-width:340px; margin-bottom:.6rem; }
-.bs { font-size:.7rem; background:transparent; border:1px solid #333; color:#555; border-radius:50px; padding:.65rem 2rem; cursor:pointer; width:100%; max-width:340px; }
-#no-xr { font-size:.65rem; color:#ff4d4d; margin-top:.8rem; display:none; text-align:center; }
-.snum { font-size:4rem; font-weight:800; color:#b8ff57; line-height:1; margin-bottom:.4rem; }
+body { background:#080810; color:#f0f0f0; font-family:Arial,sans-serif; height:100dvh; overflow:hidden; }
+.screen { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem; background:#080810; }
+h1 { font-size:2.6rem; font-weight:900; color:#e8ff50; letter-spacing:-.02em; margin-bottom:.2rem; }
+.ver { font-size:.58rem; letter-spacing:.25em; color:#444; text-transform:uppercase; margin-bottom:1.4rem; }
+.hint { width:100%; max-width:340px; margin-bottom:1.2rem; background:rgba(232,255,80,.04); border:1px solid rgba(232,255,80,.15); border-radius:14px; padding:.9rem 1.1rem; font-size:.7rem; line-height:1.85; color:#999; }
+.hint strong { color:#e8ff50; }
+.bp { font-weight:700; font-size:.8rem; background:#e8ff50; color:#080810; border:none; border-radius:50px; padding:.9rem 2rem; cursor:pointer; width:100%; max-width:340px; margin-bottom:.6rem; }
+.bp:disabled { opacity:.3; cursor:not-allowed; }
+.bs { font-size:.68rem; background:transparent; border:1px solid #222; color:#444; border-radius:50px; padding:.65rem 2rem; cursor:pointer; width:100%; max-width:340px; }
+#no-xr { font-size:.65rem; color:#ff5566; margin-top:.8rem; display:none; text-align:center; }
+.snum { font-size:4.5rem; font-weight:900; color:#e8ff50; line-height:1; margin-bottom:.3rem; }
 #sbd { width:100%; max-width:300px; margin-bottom:1.5rem; }
-.sr { display:flex; justify-content:space-between; padding:.45rem 0; border-bottom:1px solid #111; font-size:.7rem; }
-.ok{color:#b8ff57;} .fail{color:#ff4d4d;}
+.sr { display:flex; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid #111; font-size:.7rem; }
+.sr:last-child{border:none;} .ok{color:#e8ff50;} .fail{color:#ff5566;}
 </style>
 </head>
 <body>
 
 <div class="screen" id="start">
   <h1>SensoryAR</h1>
-  <div class="sub">v7 · Quest 3 · Hand Tracking</div>
+  <div class="ver">v9 · Ghost Hands · Wrist Ray</div>
   <div class="hint">
-    <strong>👆 Управление:</strong><br>
-    Тёмная панель появится перед тобой в AR.<br>
-    Скелет рук — зелёные точки.<br>
-    <strong>Щипок</strong> (pinch) = выбор кнопки.<br>
-    Луч из пальца показывает куда целишься.
+    <strong>🖐 Управление руками:</strong><br>
+    Полупрозрачные руки повторяют твои движения.<br>
+    Из запястья выходит луч — наведи на кнопку.<br>
+    <strong>Щипок</strong> (pinch) = выбор. Луч не уходит вниз!<br>
+    Панель фиксирована в пространстве.
   </div>
   <button class="bp" id="ar-btn">🥽 Войти в AR</button>
   <button class="bs" id="demo-btn">🖥 Демо (мышь)</button>
@@ -39,9 +40,9 @@ h1 { font-size:2.2rem; color:#b8ff57; margin-bottom:.3rem; }
 </div>
 
 <div class="screen" id="score-screen" style="display:none">
-  <div style="font-size:.6rem;letter-spacing:.2em;color:#444;text-transform:uppercase;margin-bottom:.8rem">Сессия завершена</div>
+  <div style="font-size:.55rem;letter-spacing:.25em;color:#333;text-transform:uppercase;margin-bottom:1rem">Сессия завершена</div>
   <div class="snum" id="sc-num">0/0</div>
-  <div style="font-size:.75rem;color:#555;margin-bottom:1.5rem" id="sc-pct"></div>
+  <div style="font-size:.72rem;color:#444;margin-bottom:1.5rem" id="sc-pct"></div>
   <div id="sbd"></div>
   <button class="bp" id="restart-btn" style="max-width:300px">↺ Заново</button>
 </div>
@@ -51,11 +52,11 @@ import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/thr
 
 // ═══ DATA ══════════════════════════════════════════════════════════════════
 const TASTES = [
-  {id:'sweet',  label:'Сладкий', emoji:'🍬', hex:0xff88cc, mol:'Сахароза',   thr:'0.5-2 г/л',    desc:'T1R2/T1R3 рецепторы'},
-  {id:'salty',  label:'Солёный', emoji:'🧂', hex:0x44bbff, mol:'NaCl',        thr:'0.3-1 г/л',    desc:'Na+ ENaC-каналы'},
-  {id:'bitter', label:'Горький', emoji:'☕', hex:0xcc9933, mol:'Кофеин',      thr:'0.05-0.3 г/л', desc:'>25 типов TAS2R'},
-  {id:'umami',  label:'Умами',   emoji:'🍖', hex:0xff7755, mol:'Глутамат Na', thr:'0.1-0.5 г/л',  desc:'Синергист ИМФ'},
-  {id:'pungent',label:'Острый',  emoji:'🌶', hex:0xff3333, mol:'Капсаицин',   thr:'0.0003 г/л',   desc:'TRPV1 тригеминальный'},
+  {id:'sweet',  label:'Сладкий', emoji:'🍬', hex:0xffaacc, mol:'Сахароза',    thr:'0.5–2 г/л',    desc:'Рецепторы T1R2/T1R3'},
+  {id:'salty',  label:'Солёный', emoji:'🧂', hex:0x55ccff, mol:'NaCl',         thr:'0.3–1 г/л',    desc:'Na⁺ → ENaC-каналы'},
+  {id:'bitter', label:'Горький', emoji:'☕', hex:0xddaa44, mol:'Кофеин',       thr:'0.05–0.3 г/л', desc:'>25 типов TAS2R'},
+  {id:'umami',  label:'Умами',   emoji:'🍖', hex:0xff8866, mol:'Глутамат Na',  thr:'0.1–0.5 г/л',  desc:'Синергист ИМФ/ГМФ'},
+  {id:'pungent',label:'Острый',  emoji:'🌶', hex:0xff5555, mol:'Капсаицин',    thr:'0.0003 г/л',   desc:'TRPV1 тригеминальный'},
 ];
 
 const JOINT_NAMES=[
@@ -66,7 +67,19 @@ const JOINT_NAMES=[
   'ring-finger-metacarpal','ring-finger-phalanx-proximal','ring-finger-phalanx-intermediate','ring-finger-phalanx-distal','ring-finger-tip',
   'pinky-finger-metacarpal','pinky-finger-phalanx-proximal','pinky-finger-phalanx-intermediate','pinky-finger-phalanx-distal','pinky-finger-tip',
 ];
-const BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[8,9],[0,10],[10,11],[11,12],[12,13],[13,14],[0,15],[15,16],[16,17],[17,18],[18,19],[0,20],[20,21],[21,22],[22,23],[23,24],[5,10],[10,15],[15,20]];
+
+// Bone pairs (A→B indices)
+const BONES=[
+  [0,1],[1,2],[2,3],[3,4],             // thumb
+  [0,5],[5,6],[6,7],[7,8],[8,9],       // index
+  [0,10],[10,11],[11,12],[12,13],[13,14], // middle
+  [0,15],[15,16],[16,17],[17,18],[18,19], // ring
+  [0,20],[20,21],[21,22],[22,23],[23,24], // pinky
+  [5,10],[10,15],[15,20],              // palm knuckles
+];
+
+// Joint radii (fingertip slightly larger)
+const JOINT_R = Array.from({length:25}, (_,i)=> i%5===4?0.009:i===0?0.012:0.007);
 
 // ═══ RENDERER ══════════════════════════════════════════════════════════════
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
@@ -75,162 +88,293 @@ renderer.setSize(innerWidth,innerHeight);
 renderer.xr.enabled=true;
 renderer.setClearColor(0x000000,0);
 document.body.appendChild(renderer.domElement);
-
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.001,100);
-scene.add(new THREE.AmbientLight(0xffffff,1));
-scene.add(new THREE.DirectionalLight(0xffffff,0.5));
+scene.add(new THREE.AmbientLight(0xffffff,0.9));
+const dl=new THREE.DirectionalLight(0xffffff,0.5); dl.position.set(1,3,2); scene.add(dl);
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 
-window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+// ═══ GHOST HAND MATERIAL ══════════════════════════════════════════════════
+// Semi-transparent pale blue-white, like Quest's default hand
+const ghostMat = new THREE.MeshPhongMaterial({
+  color:    0xc8e4ff,
+  emissive: 0x102030,
+  transparent: true,
+  opacity:  0.38,
+  side: THREE.FrontSide,
+  depthWrite: false,
+});
+const ghostMatPinch = new THREE.MeshPhongMaterial({
+  color:    0xe8ff50,
+  emissive: 0x404010,
+  transparent: true,
+  opacity:  0.55,
+  side: THREE.FrontSide,
+  depthWrite: false,
 });
 
-// ═══ SOLID CANVAS TEXTURE (no transparency) ════════════════════════════════
-function solidTex(w,h,drawFn){
-  const c=document.createElement('canvas');
-  c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
-  // Fill solid background first — no transparency
-  ctx.fillStyle='#0d0d28';
-  ctx.fillRect(0,0,w,h);
-  drawFn(ctx,w,h);
-  const t=new THREE.CanvasTexture(c);
-  return t;
-}
+// ═══ GHOST HAND BUILDER ════════════════════════════════════════════════════
+class GhostHand {
+  constructor(){
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.joints = []; // sphere meshes
+    this.bones  = []; // cylinder meshes
 
-// SOLID material — MeshPhongMaterial, no transparent flag
-function solidMat(tex){
-  return new THREE.MeshPhongMaterial({map:tex,side:THREE.DoubleSide});
-}
+    // Joint spheres
+    for(let i=0;i<25;i++){
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(JOINT_R[i], 10, 10),
+        ghostMat.clone()
+      );
+      m.visible=false;
+      this.group.add(m);
+      this.joints.push(m);
+    }
 
-function solidPlane(w,h,tex){
-  return new THREE.Mesh(new THREE.PlaneGeometry(w,h),solidMat(tex));
-}
-
-// ═══ UI PARENT — world space, updated every frame to follow camera ══════════
-const UI=new THREE.Group();
-scene.add(UI);
-
-// ── Main background panel ─────────────────────────────────────────────────
-const bgTex=solidTex(8,6,(ctx,W,H)=>{
-  ctx.strokeStyle='#3333aa';
-  ctx.lineWidth=8;
-  ctx.strokeRect(4,4,W-8,H-8);
-});
-const bgPlane=solidPlane(0.8,0.6,bgTex);
-bgPlane.position.z=0;
-UI.add(bgPlane);
-
-// ── Question/info label ───────────────────────────────────────────────────
-let labelMesh=null;
-function setLabel(line1,line2,line3=''){
-  if(labelMesh){UI.remove(labelMesh);}
-  const tex=solidTex(512,128,(ctx,W,H)=>{
-    ctx.fillStyle='#8888ff';
-    ctx.font='bold 18px Arial,sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText(line1,W/2,36);
-    ctx.fillStyle='#ffffff';
-    ctx.font='bold 22px Arial,sans-serif';
-    ctx.fillText(line2,W/2,72);
-    ctx.fillStyle='#88ff88';
-    ctx.font='16px Arial,sans-serif';
-    ctx.fillText(line3,W/2,104);
-  });
-  labelMesh=solidPlane(0.7,0.175,tex);
-  labelMesh.position.set(0,0.18,0.002);
-  UI.add(labelMesh);
-}
-
-// ── Taste buttons ─────────────────────────────────────────────────────────
-const BTN_LIST=[];
-const BTN_W=0.24,BTN_H=0.085,GAP=0.014;
-const btnLayout=[
-  {i:0,col:0,row:0},{i:1,col:1,row:0},
-  {i:2,col:0,row:1},{i:3,col:1,row:1},
-  {i:4,col:0,row:2,wide:true},
-];
-const GRID_X=-(BTN_W+GAP)/2;
-const GRID_Y=-0.01;
-
-function buildBtns(states={}){
-  BTN_LIST.forEach(b=>{UI.remove(b.mesh);});
-  BTN_LIST.length=0;
-  btnLayout.forEach(({i,col,row,wide})=>{
-    const t=TASTES[i];
-    const st=states[t.id]||'normal';
-    const bw=wide?BTN_W*2+GAP:BTN_W;
-    const x=GRID_X+col*(BTN_W+GAP)+(wide?(BTN_W+GAP)/2:BTN_W/2);
-    const y=GRID_Y-row*(BTN_H+GAP)-BTN_H/2;
-
-    // Choose background color based on state — all SOLID
-    let bgHex='#141430';
-    let borderHex='#2a2a55';
-    if(st==='hov')    {bgHex='#1a3010';borderHex='#b8ff57';}
-    if(st==='correct'){bgHex='#0a2a0a';borderHex='#44ff44';}
-    if(st==='wrong')  {bgHex='#2a0a0a';borderHex='#ff4444';}
-
-    const CW=wide?512:256,CH=100;
-    const tex=solidTex(CW,CH,(ctx,W,H)=>{
-      ctx.fillStyle=bgHex;
-      ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle=borderHex;
-      ctx.lineWidth=6;
-      ctx.strokeRect(3,3,W-6,H-6);
-      const c3=new THREE.Color(t.hex);
-      let tc='#'+c3.getHexString();
-      if(st==='correct') tc='#88ff88';
-      if(st==='wrong')   tc='#ff6666';
-      ctx.fillStyle=tc;
-      ctx.font='bold 24px Arial,sans-serif';
-      ctx.textAlign='center';
-      ctx.textBaseline='middle';
-      ctx.fillText(t.emoji+' '+t.label,W/2,H/2);
+    // Bone cylinders (between joint pairs)
+    BONES.forEach(([a,b])=>{
+      const m = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.005, 0.005, 1, 8), // height=1, will be scaled
+        ghostMat.clone()
+      );
+      m.visible=false;
+      m.userData={a,b};
+      this.group.add(m);
+      this.bones.push(m);
     });
 
-    const mesh=solidPlane(bw,BTN_H,tex);
-    mesh.position.set(x,y,0.003);
-    UI.add(mesh);
-    BTN_LIST.push({mesh,id:t.id,x,y,hw:bw/2,hh:BTN_H/2});
-  });
+    this.poses = new Array(25).fill(null);
+    this.visible = false;
+  }
+
+  // Update from XR frame
+  update(hand, frame, refSpace, isPinching){
+    const poses = [];
+    let anyValid = false;
+
+    JOINT_NAMES.forEach((name,ji)=>{
+      const jt = hand.get(name);
+      if(!jt){ poses.push(null); return; }
+      const p = frame.getJointPose(jt, refSpace);
+      if(!p){ poses.push(null); return; }
+      poses.push(p.transform.position);
+      anyValid = true;
+    });
+
+    this.poses = poses;
+
+    if(!anyValid){
+      this.group.children.forEach(c=>c.visible=false);
+      return;
+    }
+
+    // Update joint spheres
+    this.joints.forEach((m,i)=>{
+      const p=poses[i];
+      if(!p){ m.visible=false; return; }
+      m.position.set(p.x,p.y,p.z);
+      // Pinch highlight on index tip (#9) and thumb tip (#4)
+      const isPinchJoint = (i===9||i===4);
+      m.material.color.setHex(isPinching && isPinchJoint ? 0xe8ff50 : 0xc8e4ff);
+      m.material.emissive.setHex(isPinching && isPinchJoint ? 0x606010 : 0x102030);
+      m.material.opacity = isPinching && isPinchJoint ? 0.8 : 0.38;
+      m.visible=true;
+    });
+
+    // Update bone cylinders
+    this.bones.forEach(m=>{
+      const {a,b}=m.userData;
+      const pa=poses[a], pb=poses[b];
+      if(!pa||!pb){ m.visible=false; return; }
+      const A=new THREE.Vector3(pa.x,pa.y,pa.z);
+      const B=new THREE.Vector3(pb.x,pb.y,pb.z);
+      const mid=new THREE.Vector3().addVectors(A,B).multiplyScalar(0.5);
+      const len=A.distanceTo(B);
+      m.position.copy(mid);
+      m.scale.set(1,len,1);
+      m.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0,1,0),
+        new THREE.Vector3().subVectors(B,A).normalize()
+      );
+      m.visible=true;
+    });
+  }
+
+  // Get wrist position and hand-pointing direction for ray
+  getWristRay(){
+    const wrist = this.poses[0];      // wrist
+    const mid3  = this.poses[12];     // middle finger intermediate
+    const idx3  = this.poses[7];      // index finger intermediate
+    if(!wrist||!mid3) return null;
+
+    const W = new THREE.Vector3(wrist.x, wrist.y, wrist.z);
+    const M = new THREE.Vector3(mid3.x, mid3.y, mid3.z);
+
+    // Ray origin: slightly above wrist toward knuckles
+    const dir = new THREE.Vector3().subVectors(M, W).normalize();
+    const origin = W.clone().addScaledVector(dir, 0.06); // 6cm from wrist along hand
+
+    return { origin, dir };
+  }
 }
 
-// ── Feedback panel ────────────────────────────────────────────────────────
-let fbMesh=null,nextMesh=null;
-const NEXT={x:0,y:-0.345,hw:0.25,hh:0.044};
+const HANDS = [new GhostHand(), new GhostHand()];
+
+// ═══ WRIST RAY ═════════════════════════════════════════════════════════════
+const rayMat = new THREE.LineBasicMaterial({
+  color: 0xe8ff50, transparent: true, opacity: 0.7
+});
+const rayGeo = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(), new THREE.Vector3(0,0,-1)
+]);
+const rayLine = new THREE.Line(rayGeo, rayMat);
+scene.add(rayLine); rayLine.visible=false;
+
+// Ray hit dot
+const hitDot = new THREE.Mesh(
+  new THREE.SphereGeometry(0.008, 8, 8),
+  new THREE.MeshPhongMaterial({color:0xe8ff50, emissive:0x808010})
+);
+scene.add(hitDot); hitDot.visible=false;
+
+// ═══ CANVAS TEXTURE HELPER ══════════════════════════════════════════════════
+function makeTex(w,h,fn){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d'); fn(ctx,w,h);
+  return new THREE.CanvasTexture(c);
+}
+function solidMesh(w,h,tex){
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(w,h),
+    new THREE.MeshPhongMaterial({map:tex,side:THREE.DoubleSide})
+  );
+}
+
+// ═══ UI — fixed world space ═════════════════════════════════════════════════
+const UI=new THREE.Group(); scene.add(UI);
+let uiPlaced=false;
+
+// Background
+UI.add(solidMesh(0.82,0.62,makeTex(820,620,(ctx,W,H)=>{
+  ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,W,H);
+  const g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'rgba(232,255,80,0.03)');
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(232,255,80,0.18)'; ctx.lineWidth=2;
+  ctx.strokeRect(1,1,W-2,H-2);
+})));
+
+let scoreMesh=null;
+function buildScore(ok,tot,n,total){
+  if(scoreMesh)UI.remove(scoreMesh);
+  const tex=makeTex(820,70,(ctx,W,H)=>{
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(232,255,80,0.1)'; ctx.fillRect(0,H-2,W,2);
+    ctx.fillStyle='#e8ff50'; ctx.font='bold 26px Arial';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(`✓ ${ok} / ${tot}`, 24, H/2);
+    ctx.fillStyle='#333'; ctx.font='22px Arial';
+    ctx.textAlign='right';
+    ctx.fillText(`${n} / ${total}`, W-24, H/2);
+  });
+  scoreMesh=solidMesh(0.82,0.07,tex);
+  scoreMesh.position.set(0,0.275,0.001);
+  UI.add(scoreMesh);
+}
+
+let qMesh=null;
+function buildQ(txt){
+  if(qMesh)UI.remove(qMesh);
+  const tex=makeTex(820,80,(ctx,W,H)=>{
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.font='bold 26px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(txt,W/2,H/2);
+  });
+  qMesh=solidMesh(0.82,0.080,tex);
+  qMesh.position.set(0,0.185,0.001);
+  UI.add(qMesh);
+}
+
+// Buttons
+const BTNS=[];
+let hovId=null,btnStates={};
+const BW=0.24, BH=0.082, GAP=0.012;
+
+function buildBtns(states){
+  BTNS.forEach(b=>UI.remove(b.mesh)); BTNS.length=0;
+  [[0,1],[2,3]].forEach((pair,row)=>{
+    pair.forEach((ti,col)=>{
+      const t=TASTES[ti];
+      const st=states[t.id]||'normal';
+      const x=(col===0?-1:1)*(BW/2+GAP/2);
+      const y=0.07-row*(BH+GAP);
+      _makeBtn(t,st,x,y,BW,BH);
+    });
+  });
+  const t5=TASTES[4]; const st5=states[t5.id]||'normal';
+  _makeBtn(t5,st5,0,0.07-2*(BH+GAP),BW*2+GAP,BH);
+}
+
+function _makeBtn(t,st,x,y,bw,bh){
+  let bg='#111118', brd='rgba(255,255,255,0.07)';
+  if(st==='hov')    {bg='rgba(232,255,80,0.03)'; brd='rgba(232,255,80,0.35)';}
+  if(st==='correct'){bg='rgba(60,255,80,0.08)';  brd='rgba(60,255,80,0.5)';}
+  if(st==='wrong')  {bg='rgba(220,50,50,0.08)';  brd='rgba(220,50,50,0.5)';}
+  const PW=Math.round(bw*1000), PH=Math.round(bh*1000);
+  const tex=makeTex(PW,PH,(ctx,W,H)=>{
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle=brd; ctx.lineWidth=3; ctx.strokeRect(2,2,W-4,H-4);
+    const c3=new THREE.Color(t.hex);
+    let fc='#'+c3.getHexString();
+    if(st==='correct') fc='#88ff88';
+    if(st==='wrong')   fc='#ff7777';
+    ctx.fillStyle=fc; ctx.font=`bold ${Math.round(H*0.38)}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(t.emoji+' '+t.label, W/2, H/2);
+  });
+  const mesh=solidMesh(bw,bh,tex);
+  mesh.position.set(x,y,0.002);
+  UI.add(mesh);
+  BTNS.push({mesh,id:t.id});
+}
+
+let fbMesh=null, nextMesh=null, feedOk=false, feedTaste=null;
+const NEXT_Y=-0.225;
 
 function buildFeedback(ok,t){
   clearFeedback();
-  const tex=solidTex(512,220,(ctx,W,H)=>{
-    ctx.fillStyle=ok?'#0a2a0a':'#2a0a0a';
+  const tex=makeTex(820,230,(ctx,W,H)=>{
+    ctx.fillStyle=ok?'rgba(40,120,40,0.18)':'rgba(160,30,30,0.18)';
     ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle=ok?'#44ff44':'#ff4444';
-    ctx.lineWidth=6; ctx.strokeRect(3,3,W-6,H-6);
-    ctx.fillStyle=ok?'#88ff88':'#ff6666';
-    ctx.font='bold 22px Arial,sans-serif';
-    ctx.textAlign='center';
-    ctx.fillText((ok?'✓ ВЕРНО: ':'✗ НЕВЕРНО: ')+t.emoji+' '+t.label,W/2,42);
-    ctx.fillStyle='#ffffff'; ctx.font='17px Arial,sans-serif';
-    ctx.fillText(t.mol,W/2,82);
-    ctx.fillStyle='#aaaaff'; ctx.font='15px Arial,sans-serif';
-    ctx.fillText('Порог: '+t.thr,W/2,116);
-    ctx.fillStyle='#888899'; ctx.font='14px Arial,sans-serif';
-    ctx.fillText(t.desc,W/2,148);
+    ctx.strokeStyle=ok?'rgba(80,220,80,0.7)':'rgba(220,60,60,0.7)';
+    ctx.lineWidth=3; ctx.strokeRect(2,2,W-4,H-4);
+    ctx.fillStyle=ok?'#88ff88':'#ff7777';
+    ctx.font='bold 28px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText((ok?'✓  ':'✗  ')+t.emoji+' '+t.label,W/2,18);
+    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='bold 22px Arial';
+    ctx.fillText(t.mol,W/2,64);
+    ctx.fillStyle='rgba(180,190,255,0.7)'; ctx.font='18px Arial';
+    ctx.fillText('Порог: '+t.thr,W/2,100);
+    ctx.fillStyle='rgba(150,155,180,0.65)'; ctx.font='17px Arial';
+    ctx.fillText(t.desc,W/2,132);
   });
-  fbMesh=solidPlane(0.65,0.28,tex);
-  fbMesh.position.set(0,0.15,0.003);
+  fbMesh=solidMesh(0.82,0.23,tex);
+  fbMesh.position.set(0,0.11,0.002);
   UI.add(fbMesh);
 
-  const ntex=solidTex(440,80,(ctx,W,H)=>{
-    ctx.fillStyle='#b8ff57'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#04040c'; ctx.font='bold 20px Arial,sans-serif';
+  const ntex=makeTex(740,82,(ctx,W,H)=>{
+    const isHov=hovId==='__next__';
+    ctx.fillStyle=isHov?'#f5ff80':'#e8ff50'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle=isHov?'#ffffff':'rgba(0,0,0,0)'; ctx.lineWidth=3; ctx.strokeRect(2,2,W-4,H-4);
+    ctx.fillStyle='#080810'; ctx.font='bold 24px Arial';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('-> Следующий образец',W/2,H/2);
+    ctx.fillText('→  Следующий образец',W/2,H/2);
   });
-  nextMesh=solidPlane(0.50,0.088,ntex);
-  nextMesh.position.set(NEXT.x,NEXT.y,0.003);
+  nextMesh=solidMesh(0.74,0.082,ntex);
+  nextMesh.position.set(0,NEXT_Y,0.002);
   UI.add(nextMesh);
 }
 
@@ -239,102 +383,52 @@ function clearFeedback(){
   if(nextMesh){UI.remove(nextMesh);nextMesh=null;}
 }
 
-// ── Score bar ─────────────────────────────────────────────────────────────
-let scoreMesh=null;
-function buildScore(ok,tot,sampleN,sampleTot){
-  if(scoreMesh){UI.remove(scoreMesh);}
-  const tex=solidTex(512,60,(ctx,W,H)=>{
-    ctx.fillStyle='#0d0d28'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#b8ff57'; ctx.font='bold 18px Arial,sans-serif';
-    ctx.textAlign='left';
-    ctx.fillText(`OK: ${ok}/${tot}`,16,38);
-    ctx.fillStyle='#57c8ff'; ctx.textAlign='right';
-    ctx.fillText(`Образец ${sampleN}/${sampleTot}`,W-16,38);
-  });
-  scoreMesh=solidPlane(0.76,0.075,tex);
-  scoreMesh.position.set(0,0.27,0.002);
-  UI.add(scoreMesh);
+// ═══ RAYCASTER ═════════════════════════════════════════════════════════════
+const RC=new THREE.Raycaster();
+function getHittables(){
+  if(phase==='q') return BTNS.filter(b=>btnStates[b.id]==='normal'||btnStates[b.id]==='hov').map(b=>b.mesh);
+  if(phase==='f'&&nextMesh) return [nextMesh];
+  return [];
 }
-
-// ═══ HAND SKELETON ═════════════════════════════════════════════════════════
-const HGROUPS=[new THREE.Group(),new THREE.Group()];
-const HJOINTS=[[],[]];
-const jMat=new THREE.MeshPhongMaterial({color:0xb8ff57,emissive:0x304000});
-const bMat=new THREE.LineBasicMaterial({color:0x608030});
-HGROUPS.forEach((g,hi)=>{
-  for(let i=0;i<25;i++){
-    const m=new THREE.Mesh(new THREE.SphereGeometry(i%5===4?0.009:0.006,8,8),jMat.clone());
-    m.visible=false; g.add(m); HJOINTS[hi].push(m);
-  }
-  BONES.forEach(([a,b])=>{
-    const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]),bMat.clone());
-    l.visible=false; l.userData={a,b}; g.add(l);
-  });
-  scene.add(g);
-});
-
-// Finger ray
-const rayGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
-const rayLine=new THREE.Line(rayGeo,new THREE.LineBasicMaterial({color:0xb8ff57}));
-scene.add(rayLine); rayLine.visible=false;
-
-// ═══ CUPS ══════════════════════════════════════════════════════════════════
-const CUPS=new THREE.Group(); scene.add(CUPS);
-const cupObjs=[];
-[-0.22,0,0.22].forEach((x,i)=>{
-  const g=new THREE.Group(); g.position.set(x,0,0);
-  const rm=new THREE.MeshPhongMaterial({color:0x444444,emissive:0x080808});
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.055,0.006,8,48),rm);
-  ring.rotation.x=Math.PI/2; ring.position.y=0.06; g.add(ring);
-  const om=new THREE.MeshPhongMaterial({color:0x888888,emissive:0x111111});
-  const orb=new THREE.Mesh(new THREE.SphereGeometry(0.02,12,12),om);
-  orb.position.y=0.14; g.add(orb);
-  // Cup number label
-  const numTex=solidTex(64,64,(ctx,W,H)=>{
-    ctx.fillStyle='#0d0d28';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#ffffff';ctx.font='bold 36px Arial';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(i+1,W/2,H/2);
-  });
-  const numMesh=new THREE.Mesh(new THREE.PlaneGeometry(0.06,0.06),new THREE.MeshPhongMaterial({map:numTex,side:THREE.DoubleSide}));
-  numMesh.position.set(0,0.22,0); g.add(numMesh);
-  CUPS.add(g); cupObjs.push({g,rm,om,orb});
-});
-
-function hlCup(ai){
-  cupObjs.forEach((c,i)=>{
-    const on=i===ai;
-    c.rm.color.setHex(on?0xb8ff57:0x444444);
-    c.rm.emissive.setHex(on?0x304000:0x080808);
-    c.om.color.setHex(on?0xb8ff57:0x888888);
-    c.g.scale.setScalar(on?1.35:1.0);
-  });
+function rayHit(org,dir){
+  RC.set(org,dir);
+  const hits=RC.intersectObjects(getHittables());
+  if(!hits.length) return null;
+  const b=BTNS.find(b=>b.mesh===hits[0].object);
+  if(b) return {id:b.id, point:hits[0].point};
+  if(hits[0].object===nextMesh) return {id:'__next__', point:hits[0].point};
+  return null;
+}
+function setHov(id){
+  if(id===hovId) return;
+  if(hovId&&hovId!=='__next__'&&btnStates[hovId]==='hov') btnStates[hovId]='normal';
+  hovId=id;
+  if(hovId&&hovId!=='__next__') btnStates[hovId]='hov';
+  if(phase==='q') buildBtns(btnStates);
+  if(phase==='f') buildFeedback(feedOk,feedTaste); // refresh next button hover
 }
 
 // ═══ SESSION ═══════════════════════════════════════════════════════════════
-let xrSession=null,demoMode=false;
+let xrSession=null, demoMode=false;
 let queue=[],qi=0,okCount=0,totCount=0,answered=false,results=[];
-let phase='q',btnStates={},hovId=null,lastPinch=false,cupsPlaced=false;
+let phase='q', lastPinch=false;
 
 function startSess(){
   queue=[...TASTES,...TASTES].sort(()=>Math.random()-.5);
-  qi=0;okCount=0;totCount=0;answered=false;results=[];cupsPlaced=false;
+  qi=0;okCount=0;totCount=0;answered=false;results=[];
   TASTES.forEach(t=>btnStates[t.id]='normal');
-  clearFeedback(); UI.visible=true;
-  showSample();
+  uiPlaced=false; UI.visible=true;
+  clearFeedback(); showSample();
 }
-
 function showSample(){
   if(qi>=queue.length){endSess();return;}
   answered=false; phase='q'; hovId=null;
   TASTES.forEach(t=>btnStates[t.id]='normal');
   clearFeedback();
-  hlCup(qi%3);
   buildScore(okCount,totCount,qi+1,queue.length);
-  setLabel('ОПРЕДЕЛИТЕ ВКУС — образец '+(qi+1)+'/'+queue.length,'Попробуйте и назовите вкус:','');
+  buildQ(`Попробуйте образец № ${qi+1} — определите вкус`);
   buildBtns(btnStates);
 }
-
 function onAnswer(id){
   if(answered||phase!=='q')return; answered=true;
   const t=queue[qi]; const ok=id===t.id;
@@ -347,12 +441,17 @@ function onAnswer(id){
   });
   buildBtns(btnStates);
   buildScore(okCount,totCount,qi+1,queue.length);
-  setLabel('','','');
-  phase='f'; buildFeedback(ok,t);
+  if(qMesh){UI.remove(qMesh);qMesh=null;}
+  feedOk=ok; feedTaste=t; phase='f'; hovId=null;
+  buildFeedback(ok,t);
 }
-
+function doSelect(id){
+  if(!id)return;
+  if(id==='__next__'){qi++;showSample();}
+  else onAnswer(id);
+}
 function endSess(){
-  UI.visible=false;
+  UI.visible=false; rayLine.visible=false; hitDot.visible=false;
   const pct=totCount?Math.round(okCount/totCount*100):0;
   document.getElementById('sc-num').textContent=`${okCount}/${totCount}`;
   document.getElementById('sc-pct').textContent=pct>=90?`${pct}% — Отлично!`:pct>=70?`${pct}% — Хорошо.`:`${pct}% — Нужна практика.`;
@@ -362,101 +461,88 @@ function endSess(){
   if(xrSession){xrSession.end();xrSession=null;}
 }
 
-// ═══ RAYCASTER for UI ══════════════════════════════════════════════════════
-const RC=new THREE.Raycaster();
-function hitUI(org,dir){
-  RC.set(org,dir);
-  if(phase==='q'){
-    const meshes=BTN_LIST.filter(b=>btnStates[b.id]==='normal'||btnStates[b.id]==='hov').map(b=>b.mesh);
-    const h=RC.intersectObjects(meshes);
-    if(h.length){
-      const b=BTN_LIST.find(b=>b.mesh===h[0].object);
-      return b?b.id:null;
-    }
-  }
-  if(phase==='f'&&nextMesh){
-    const h=RC.intersectObjects([nextMesh]);
-    if(h.length) return '__next__';
-  }
-  return null;
-}
-
-function setHov(newId){
-  if(newId===hovId)return;
-  if(hovId&&hovId!=='__next__'&&btnStates[hovId]==='hov'){btnStates[hovId]='normal';}
-  hovId=newId;
-  if(hovId&&hovId!=='__next__'){btnStates[hovId]='hov';}
-  if(phase==='q') buildBtns(btnStates);
-}
-
-// ═══ HANDS ═════════════════════════════════════════════════════════════════
+// ═══ HAND TRACKING ═════════════════════════════════════════════════════════
 function procHands(frame){
   const ref=renderer.xr.getReferenceSpace(); if(!ref)return;
-  let any=false;
+  let anyHand=false;
+  let rayOrigin=null, rayDir=null;
+  let pinching=false;
+
   Array.from(xrSession.inputSources).forEach((src,hi)=>{
-    if(!src.hand||hi>1)return; any=true;
-    const poses=[];
-    JOINT_NAMES.forEach((name,ji)=>{
-      const jt=src.hand.get(name);if(!jt){poses.push(null);return;}
-      const p=frame.getJointPose(jt,ref);if(!p){poses.push(null);return;}
-      const {x,y,z}=p.transform.position;
-      HJOINTS[hi][ji].position.set(x,y,z);
-      HJOINTS[hi][ji].visible=true;
-      poses.push({x,y,z});
-    });
-    HGROUPS[hi].children.forEach(c=>{
-      if(c.userData.a===undefined)return;
-      const a=poses[c.userData.a],b=poses[c.userData.b];
-      if(a&&b){c.geometry.setFromPoints([new THREE.Vector3(a.x,a.y,a.z),new THREE.Vector3(b.x,b.y,b.z)]);c.geometry.attributes.position.needsUpdate=true;c.visible=true;}
-      else c.visible=false;
-    });
-    if(hi===0){
-      const iT=poses[9],iP=poses[6],tT=poses[4];
-      if(iT&&iP&&tT){
-        const dir=new THREE.Vector3(iT.x-iP.x,iT.y-iP.y,iT.z-iP.z).normalize();
-        const org=new THREE.Vector3(iT.x,iT.y,iT.z);
-        rayGeo.setFromPoints([org,org.clone().addScaledVector(dir,0.6)]);
-        rayGeo.attributes.position.needsUpdate=true;
-        rayLine.visible=true;
-        setHov(hitUI(org,dir));
-        const dist=Math.sqrt((iT.x-tT.x)**2+(iT.y-tT.y)**2+(iT.z-tT.z)**2);
-        const pin=dist<0.028;
-        if(pin&&!lastPinch&&hovId){
-          if(hovId==='__next__'){qi++;showSample();}
-          else onAnswer(hovId);
-        }
-        lastPinch=pin;
+    if(!src.hand||hi>1)return;
+    anyHand=true;
+
+    // Detect pinch first (index tip #9, thumb tip #4)
+    const jI=src.hand.get('index-finger-tip');
+    const jT=src.hand.get('thumb-tip');
+    let isPinching=false;
+    if(jI&&jT){
+      const pI=frame.getJointPose(jI,ref);
+      const pT=frame.getJointPose(jT,ref);
+      if(pI&&pT){
+        const {x:ix,y:iy,z:iz}=pI.transform.position;
+        const {x:tx,y:ty,z:tz}=pT.transform.position;
+        const dist=Math.sqrt((ix-tx)**2+(iy-ty)**2+(iz-tz)**2);
+        isPinching=dist<0.028;
       }
     }
+    if(hi===0) pinching=isPinching;
+
+    // Update ghost hand
+    HANDS[hi].update(src.hand, frame, ref, isPinching);
+
+    // Build wrist ray for primary hand (hi===0)
+    if(hi===0){
+      const wr=HANDS[0].getWristRay();
+      if(wr){ rayOrigin=wr.origin; rayDir=wr.dir; }
+    }
   });
-  if(!any){HGROUPS.forEach(g=>g.children.forEach(c=>c.visible=false));rayLine.visible=false;lastPinch=false;setHov(null);}
+
+  if(!anyHand){
+    HANDS.forEach(h=>h.group.children.forEach(c=>c.visible=false));
+    rayLine.visible=false; hitDot.visible=false;
+    lastPinch=false; setHov(null); return;
+  }
+
+  // Draw wrist ray
+  if(rayOrigin&&rayDir){
+    const rayEnd=rayOrigin.clone().addScaledVector(rayDir,1.2);
+    rayGeo.setFromPoints([rayOrigin,rayEnd]);
+    rayGeo.attributes.position.needsUpdate=true;
+    rayLine.visible=true;
+
+    // Ray hit test
+    const hit=rayHit(rayOrigin,rayDir);
+    setHov(hit?.id||null);
+    if(hit){
+      hitDot.position.copy(hit.point);
+      hitDot.visible=true;
+      rayMat.color.setHex(0xe8ff50);
+    } else {
+      hitDot.visible=false;
+      rayMat.color.setHex(0x888888);
+    }
+  }
+
+  // Pinch rising edge = select
+  if(pinching&&!lastPinch) doSelect(hovId);
+  lastPinch=pinching;
 }
 
-// ═══ CUP PLACEMENT ═════════════════════════════════════════════════════════
-function placeCups(){
-  if(cupsPlaced)return;
+// ═══ UI PLACEMENT (once) ═══════════════════════════════════════════════════
+function placeUI(){
+  if(uiPlaced)return;
   const xc=renderer.xr.getCamera(camera);
   const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(xc.quaternion);
   fwd.y=0; fwd.normalize();
-  CUPS.position.set(xc.position.x+fwd.x*0.65,0.78,xc.position.z+fwd.z*0.65);
-  const e=new THREE.Euler().setFromQuaternion(xc.quaternion,'YXZ');
-  e.x=0;e.z=0; CUPS.quaternion.setFromEuler(e);
-  cupsPlaced=true;
-}
-
-// ═══ UI POSITION (world space, updated every frame to follow camera) ════════
-function posUI(){
-  const xc=renderer.xr.getCamera(camera);
-  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(xc.quaternion);
-  fwd.y=0; fwd.normalize();
-  // 0.7m in front, 0.1m below eye
   UI.position.set(
-    xc.position.x+fwd.x*0.7,
-    xc.position.y-0.1,
-    xc.position.z+fwd.z*0.7
+    xc.position.x+fwd.x*0.85,
+    xc.position.y+0.05,
+    xc.position.z+fwd.z*0.85
   );
   const e=new THREE.Euler().setFromQuaternion(xc.quaternion,'YXZ');
   e.x=0; e.z=0; UI.quaternion.setFromEuler(e);
+  uiPlaced=true;
 }
 
 // ═══ DEMO MOUSE ════════════════════════════════════════════════════════════
@@ -464,28 +550,25 @@ renderer.domElement.addEventListener('mousemove',e=>{
   if(!demoMode)return;
   const mv=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
   RC.setFromCamera(mv,camera);
-  setHov(hitUI(RC.ray.origin,RC.ray.direction));
+  const hit=rayHit(RC.ray.origin,RC.ray.direction);
+  setHov(hit?.id||null);
+  if(hit){hitDot.position.copy(hit.point);hitDot.visible=true;}
+  else hitDot.visible=false;
 });
-renderer.domElement.addEventListener('click',e=>{
-  if(!demoMode)return;
-  if(hovId){if(hovId==='__next__'){qi++;showSample();}else onAnswer(hovId);}
-});
+renderer.domElement.addEventListener('click',()=>{if(demoMode) doSelect(hovId);});
 
-// ═══ RENDER LOOP ═══════════════════════════════════════════════════════════
+// ═══ RENDER LOOP ════════════════════════════════════════════════════════════
 const clock=new THREE.Clock();
 renderer.setAnimationLoop((time,frame)=>{
-  const t=clock.getElapsedTime();
-  cupObjs.forEach((c,i)=>{c.orb.position.y=0.14+Math.sin(t*1.4+i*1.3)*0.012;c.orb.rotation.y=t*0.6;});
   if(xrSession){
-    posUI();
-    placeCups();
-    if(frame)procHands(frame);
+    placeUI();
+    if(frame) procHands(frame);
   } else if(demoMode){
-    // Demo: UI floats in front of camera
-    UI.position.set(0,-0.1,-0.75);
-    UI.rotation.set(0,0,0);
-    CUPS.position.set(0,-0.35,-0.9);
-    CUPS.rotation.set(0,0,0);
+    if(!uiPlaced){
+      UI.position.set(0,0,-0.85);
+      UI.rotation.set(0,0,0);
+      uiPlaced=true;
+    }
   }
   renderer.render(scene,camera);
 });
@@ -506,9 +589,11 @@ document.getElementById('ar-btn').addEventListener('click',async()=>{
     startSess();
     xrSession.addEventListener('end',()=>{
       document.getElementById('start').style.display='flex';
-      UI.visible=false; xrSession=null;
+      UI.visible=false; rayLine.visible=false; hitDot.visible=false;
+      HANDS.forEach(h=>h.group.children.forEach(c=>c.visible=false));
+      xrSession=null;
     });
-  }catch(e){alert('AR ошибка: '+e.message);}
+  }catch(e){alert('AR: '+e.message);}
 });
 
 document.getElementById('demo-btn').addEventListener('click',()=>{
@@ -519,6 +604,7 @@ document.getElementById('demo-btn').addEventListener('click',()=>{
 
 document.getElementById('restart-btn').addEventListener('click',()=>{
   document.getElementById('score-screen').style.display='none';
+  uiPlaced=false;
   if(demoMode)startSess();
   else document.getElementById('start').style.display='flex';
 });
