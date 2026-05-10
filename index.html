@@ -3,560 +3,533 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SensoryAR v2 — Hand Tracking</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Unbounded:wght@300;600;800&display=swap" rel="stylesheet">
+<title>SensoryAR v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #04040c;
-  --surface: rgba(255,255,255,0.04);
-  --border: rgba(255,255,255,0.08);
-  --accent: #b8ff57;
-  --accent2: #57c8ff;
-  --text: #f0f0f0;
-  --muted: #666;
-  --sweet: #ff8cc8;
-  --salty: #57c8ff;
-  --bitter: #c8a857;
-  --umami: #ff7a57;
-  --pungent: #ff4d4d;
-}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Space Mono', monospace; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; }
+body { background: #04040c; color: #f0f0f0; font-family: 'Space Mono', monospace; height: 100dvh; overflow: hidden; }
 canvas { position: fixed; inset: 0; z-index: 0; }
 
-/* ── START ── */
-#start-screen {
+/* ── START SCREEN ── */
+#start {
   position: fixed; inset: 0; z-index: 50;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; padding: 2rem;
-  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;
+  background: #04040c;
 }
-#start-screen::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(184,255,87,0.06) 0%, transparent 70%),
-              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(87,200,255,0.04) 0%, transparent 60%);
+.logo { display: flex; align-items: baseline; gap: .3rem; margin-bottom: .25rem; }
+.la { font-family:'Unbounded',sans-serif; font-weight:800; font-size:clamp(2rem,8vw,3rem); color:#b8ff57; }
+.lb { font-family:'Unbounded',sans-serif; font-weight:300; font-size:clamp(2rem,8vw,3rem); color:#f0f0f0; }
+.ver { font-size:.58rem; letter-spacing:.2em; color:#57c8ff; text-transform:uppercase; margin-bottom:.25rem; }
+.tag { font-size:.65rem; letter-spacing:.2em; color:#444; text-transform:uppercase; margin-bottom:1.6rem; }
+.hint { width:100%; max-width:360px; margin-bottom:1.2rem; background:rgba(184,255,87,.05); border:1px solid rgba(184,255,87,.2); border-radius:12px; padding:.85rem 1rem; font-size:.7rem; line-height:1.8; color:#bbb; }
+.hint strong { color:#b8ff57; }
+.igrid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; width:100%; max-width:360px; margin-bottom:1.5rem; }
+.ic { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:.75rem .9rem; font-size:.7rem; color:#555; line-height:1.5; }
+.ic strong { color:#f0f0f0; display:block; }
+.btn-p { font-family:'Unbounded',sans-serif; font-weight:600; font-size:.8rem; background:#b8ff57; color:#04040c; border:none; border-radius:50px; padding:.9rem 2rem; cursor:pointer; width:100%; max-width:360px; transition:transform .15s; }
+.btn-p:hover { transform:translateY(-2px); }
+.btn-p:disabled { opacity:.3; cursor:not-allowed; transform:none; }
+.btn-s { font-family:'Space Mono',sans-serif; font-size:.7rem; background:transparent; border:1px solid rgba(255,255,255,.1); color:#555; border-radius:50px; padding:.65rem 2rem; cursor:pointer; width:100%; max-width:360px; margin-top:.6rem; transition:color .2s; }
+.btn-s:hover { color:#f0f0f0; }
+#no-xr { font-size:.68rem; color:#ff4d4d; margin-top:.8rem; text-align:center; display:none; max-width:300px; line-height:1.6; }
+
+/* ── DOM OVERLAY (AR) — NO backdrop-filter, solid backgrounds ── */
+#overlay {
+  position: fixed; inset: 0; z-index: 10;
+  display: none; pointer-events: none;
+  /* CRITICAL: solid background on children, not here */
 }
-.logo-wrap { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.3rem; }
-.logo-main { font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(2.2rem,8vw,3.5rem); color: var(--accent); letter-spacing: -0.02em; }
-.logo-sub  { font-family: 'Unbounded', sans-serif; font-weight: 300; font-size: clamp(2.2rem,8vw,3.5rem); color: var(--text);  letter-spacing: -0.02em; }
-.version   { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--accent2); text-transform: uppercase; margin-bottom: 0.3rem; }
-.tagline   { font-size: 0.7rem; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; margin-bottom: 2rem; }
+#overlay.show { display: block; }
 
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; max-width: 360px; margin-bottom: 2rem; }
-.info-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
-.info-cell strong { color: var(--text); display: block; margin-bottom: 0.1rem; }
-
-.hand-hint {
-  width: 100%; max-width: 360px; margin-bottom: 1.5rem;
-  background: rgba(184,255,87,0.06); border: 1px solid rgba(184,255,87,0.2);
-  border-radius: 12px; padding: 0.9rem 1.1rem;
-  font-size: 0.72rem; line-height: 1.7; color: var(--text);
+/* top bar */
+#topbar {
+  position: absolute; top: 16px; left: 16px; right: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  pointer-events: all;
 }
-.hand-hint strong { color: var(--accent); }
-
-.btn-primary {
-  font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 0.85rem;
-  letter-spacing: 0.05em; background: var(--accent); color: #04040c;
-  border: none; border-radius: 50px; padding: 1rem 2.5rem; cursor: pointer;
-  width: 100%; max-width: 360px; transition: transform 0.15s, box-shadow 0.15s;
+#score-pill {
+  font-family:'Unbounded',sans-serif; font-weight:600; font-size:.72rem;
+  background: #0a0a1a; border: 2px solid #b8ff57;
+  border-radius:50px; padding:.4rem 1rem; color:#b8ff57;
 }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(184,255,87,0.3); }
-.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
-.btn-secondary {
-  font-family: 'Space Mono', monospace; font-size: 0.75rem; background: transparent;
-  border: 1px solid var(--border); color: var(--muted); border-radius: 50px;
-  padding: 0.75rem 2rem; cursor: pointer; width: 100%; max-width: 360px;
-  margin-top: 0.75rem; transition: border-color 0.2s, color 0.2s;
+#hand-pill {
+  font-size:.62rem; background:#0a0a1a; border:2px solid #333;
+  border-radius:50px; padding:.4rem .8rem; color:#555;
+  transition: color .3s, border-color .3s;
 }
-.btn-secondary:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
-#no-xr-msg { font-size: 0.72rem; color: var(--pungent); margin-top: 1rem; text-align: center; display: none; max-width: 320px; line-height: 1.6; }
+#hand-pill.on { color:#b8ff57; border-color:#b8ff57; }
+#exit-btn {
+  font-family:'Space Mono',sans-serif; font-size:.68rem;
+  background:#0a0a1a; border:2px solid #333; color:#555;
+  border-radius:50px; padding:.4rem .8rem; cursor:pointer;
+}
 
-/* ── OVERLAY ── */
-#overlay { position: fixed; inset: 0; z-index: 100; display: none; pointer-events: none; }
-#overlay.active { display: block; }
-
-#top-bar { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: center; pointer-events: all; }
-#score-pill { font-family: 'Unbounded', sans-serif; font-size: 0.75rem; font-weight: 600; background: rgba(4,4,12,0.85); border: 1px solid var(--border); border-radius: 50px; padding: 0.5rem 1.2rem; color: var(--accent); backdrop-filter: blur(10px); }
-#hand-status { font-size: 0.65rem; background: rgba(4,4,12,0.85); border: 1px solid var(--border); border-radius: 50px; padding: 0.5rem 1rem; color: var(--muted); backdrop-filter: blur(10px); transition: color 0.3s, border-color 0.3s; }
-#hand-status.active { color: var(--accent); border-color: rgba(184,255,87,0.4); }
-#exit-btn { font-family: 'Space Mono', monospace; font-size: 0.72rem; background: rgba(4,4,12,0.85); border: 1px solid var(--border); color: var(--muted); border-radius: 50px; padding: 0.5rem 1rem; cursor: pointer; backdrop-filter: blur(10px); pointer-events: all; }
-
-#sample-dots { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
-.s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
-.s-dot.done { background: var(--muted); }
-.s-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-
-/* ── TASK CARD ── */
+/* task card — bottom center, SOLID background */
 #task-card {
-  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-  width: calc(100% - 40px); max-width: 400px;
-  background: rgba(4,4,12,0.9); border: 1px solid var(--border);
-  border-radius: 20px; padding: 1.5rem; pointer-events: all; backdrop-filter: blur(16px);
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 420px;
+  background: #0d0d1f; border: 2px solid #222;
+  border-radius: 18px; padding: 1.4rem;
+  pointer-events: all;
 }
-.card-eyebrow { font-size: 0.62rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center; }
-.sample-badge { font-family: 'Unbounded', sans-serif; font-size: 0.65rem; font-weight: 600; color: var(--accent2); background: rgba(87,200,255,0.1); border: 1px solid rgba(87,200,255,0.2); border-radius: 20px; padding: 0.2rem 0.6rem; }
-.card-question { font-family: 'Unbounded', sans-serif; font-weight: 300; font-size: 1rem; line-height: 1.4; color: var(--text); margin-bottom: 1.2rem; }
-.taste-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.eyebrow { font-size:.58rem; letter-spacing:.18em; color:#444; text-transform:uppercase; margin-bottom:.5rem; display:flex; justify-content:space-between; }
+.badge { font-family:'Unbounded',sans-serif; font-size:.6rem; font-weight:600; color:#57c8ff; background:#0a1520; border:1px solid #57c8ff; border-radius:20px; padding:.15rem .5rem; }
+.question { font-family:'Unbounded',sans-serif; font-weight:300; font-size:.95rem; line-height:1.4; color:#f0f0f0; margin-bottom:1rem; }
+.tgrid { display:grid; grid-template-columns:1fr 1fr; gap:.45rem; }
 
-/* ── TASTE BUTTONS — hoverable via hand ray ── */
-.t-btn {
-  font-family: 'Space Mono', monospace; font-size: 0.78rem;
-  background: var(--surface); border: 1px solid var(--border);
-  color: var(--text); border-radius: 10px; padding: 0.65rem 0.5rem;
-  cursor: pointer; transition: all 0.15s; text-align: left;
-  display: flex; align-items: center; gap: 0.4rem;
-  position: relative; overflow: hidden;
+/* taste buttons — large, high contrast, pointer-events all */
+.tbtn {
+  font-family:'Space Mono',sans-serif; font-size:.75rem;
+  background:#111122; border:2px solid #222; color:#f0f0f0;
+  border-radius:10px; padding:.6rem .5rem; cursor:pointer;
+  display:flex; align-items:center; gap:.35rem;
+  transition: background .12s, border-color .12s, transform .1s;
+  pointer-events: all; position: relative; overflow: hidden;
 }
-.t-btn::after { /* pinch progress ring */
-  content: ''; position: absolute; inset: 0; border-radius: 10px;
-  border: 2px solid transparent; transition: border-color 0.1s;
-}
-.t-btn.hovered { background: rgba(184,255,87,0.08); border-color: rgba(184,255,87,0.5); transform: scale(1.03); }
-.t-btn.hovered::after { border-color: var(--accent); }
-.t-btn.pinching { background: rgba(184,255,87,0.2); }
-.t-btn.full { grid-column: 1 / -1; }
-.t-btn:disabled { cursor: default; }
-.t-btn.correct { background: rgba(184,255,87,0.12); border-color: var(--accent); color: var(--accent); }
-.t-btn.wrong    { background: rgba(255,77,77,0.12);  border-color: var(--pungent); color: var(--pungent); }
+.tbtn.wide { grid-column:1/-1; }
+.tbtn:hover, .tbtn.hov { background:#1a2a0a; border-color:#b8ff57; transform:scale(1.03); }
+.tbtn.correct { background:#0f2a0f; border-color:#b8ff57; color:#b8ff57; }
+.tbtn.wrong   { background:#2a0a0a; border-color:#ff4d4d; color:#ff4d4d; }
+.tbtn:disabled { cursor:default; transform:none; }
 
-/* pinch dwell timer */
-.dwell-bar {
-  position: absolute; bottom: 0; left: 0; height: 3px;
-  background: var(--accent); width: 0%; border-radius: 0 0 10px 10px;
-  transition: width 0.05s linear;
+/* pinch progress bar inside button */
+.pbar { position:absolute; bottom:0; left:0; height:3px; background:#b8ff57; width:0; border-radius:0 0 10px 10px; transition:width .05s linear; }
+
+/* feedback card — top center, SOLID */
+#fb-card {
+  position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 420px;
+  background: #0d0d1f; border: 2px solid #222;
+  border-radius: 18px; padding: 1.4rem;
+  pointer-events: all; display: none;
+}
+#fb-verdict { font-family:'Unbounded',sans-serif; font-size:1rem; font-weight:600; margin-bottom:.7rem; }
+.fbrow { display:flex; gap:.5rem; margin-bottom:.3rem; font-size:.72rem; }
+.fbl { color:#555; min-width:65px; font-size:.6rem; letter-spacing:.1em; text-transform:uppercase; }
+.fbv { color:#ccc; line-height:1.4; }
+#btn-next {
+  margin-top:1rem; width:100%;
+  font-family:'Unbounded',sans-serif; font-size:.72rem; font-weight:600;
+  background:#b8ff57; color:#04040c; border:none; border-radius:10px;
+  padding:.8rem; cursor:pointer; pointer-events:all;
 }
 
-/* ── FEEDBACK ── */
-#feedback-card {
-  position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-  width: calc(100% - 40px); max-width: 400px;
-  background: rgba(4,4,12,0.92); border: 1px solid var(--border);
-  border-radius: 20px; padding: 1.5rem; pointer-events: all;
-  backdrop-filter: blur(16px); display: none;
-}
-#feedback-verdict { font-family: 'Unbounded', sans-serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.8rem; }
-.fb-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
-.fb-label { font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); min-width: 70px; }
-.fb-value { font-size: 0.8rem; color: var(--text); line-height: 1.4; }
-.fb-molecule { font-family: 'Unbounded', sans-serif; font-size: 0.85rem; font-weight: 600; }
-#btn-next { margin-top: 1.2rem; width: 100%; font-family: 'Unbounded', sans-serif; font-size: 0.75rem; font-weight: 600; background: var(--accent); color: #04040c; border: none; border-radius: 10px; padding: 0.85rem; cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s; }
-#btn-next:hover { opacity: 0.85; }
-
-/* ── SCORE ── */
+/* score screen */
 #score-screen {
-  position: fixed; inset: 0; z-index: 200; display: none; flex-direction: column;
-  align-items: center; justify-content: center; background: var(--bg); padding: 2rem; text-align: center;
+  position:fixed; inset:0; z-index:200; display:none;
+  flex-direction:column; align-items:center; justify-content:center;
+  background:#04040c; padding:2rem; text-align:center;
 }
-#score-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(184,255,87,0.05) 0%, transparent 70%); pointer-events: none; }
-.score-eyebrow { font-size: 0.65rem; letter-spacing: 0.25em; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
-.score-num { font-family: 'Unbounded', sans-serif; font-size: clamp(3.5rem,15vw,6rem); font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: 0.5rem; }
-.score-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 2rem; }
-#score-breakdown { width: 100%; max-width: 340px; margin-bottom: 2rem; }
-.breakdown-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
-.breakdown-row:last-child { border-bottom: none; }
-.breakdown-taste { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); }
-.breakdown-result { font-family: 'Unbounded', sans-serif; font-size: 0.7rem; font-weight: 600; }
-.ok { color: var(--accent); } .fail { color: var(--pungent); }
+.snum { font-family:'Unbounded',sans-serif; font-size:clamp(3rem,12vw,5rem); font-weight:800; color:#b8ff57; line-height:1; margin-bottom:.4rem; }
+.spct { font-size:.75rem; color:#555; margin-bottom:1.8rem; }
+#sbd { width:100%; max-width:320px; margin-bottom:1.8rem; }
+.sr { display:flex; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid #111; font-size:.72rem; }
+.sr:last-child { border:none; }
+.st { color:#555; display:flex; align-items:center; gap:.4rem; }
+.ss { font-family:'Unbounded',sans-serif; font-size:.65rem; font-weight:600; }
+.ok{color:#b8ff57;} .fail{color:#ff4d4d;}
 </style>
 </head>
 <body>
 
-<!-- ═══ START ═══════════════════════════════════════════════════════════ -->
-<div id="start-screen">
-  <div class="logo-wrap"><span class="logo-main">Sensory</span><span class="logo-sub">AR</span></div>
-  <div class="version">v2 · Hand Tracking</div>
-  <div class="tagline">Тренажёр панелиста · Quest 3</div>
-
-  <div class="hand-hint">
-    <strong>👋 Управление руками:</strong><br>
+<!-- START -->
+<div id="start">
+  <div class="logo"><span class="la">Sensory</span><span class="lb">AR</span></div>
+  <div class="ver">v4 · Hand Skeleton + DOM UI</div>
+  <div class="tag">Тренажёр панелиста · Quest 3</div>
+  <div class="hint">
+    <strong>👆 Управление руками:</strong><br>
+    Вытяни руку — увидишь скелет из зелёных точек.<br>
     Наведи указательный палец на кнопку — она подсветится.<br>
-    Сделай <strong>щипок</strong> (pinch) большим и указательным — выбор.<br>
-    Контроллеры не нужны — руки свободны для стаканов!
+    <strong>Щипок</strong> (pinch) = выбор. Контроллеры не нужны!
   </div>
-
-  <div class="info-grid">
-    <div class="info-cell"><strong>Режим</strong>Mixed Reality (AR)</div>
-    <div class="info-cell"><strong>Сессия</strong>10 образцов, 5 вкусов</div>
-    <div class="info-cell"><strong>Ввод</strong>Hand Tracking (pinch)</div>
-    <div class="info-cell"><strong>Уровень</strong>Базовые вкусы</div>
+  <div class="igrid">
+    <div class="ic"><strong>Режим</strong>Mixed Reality AR</div>
+    <div class="ic"><strong>UI</strong>DOM overlay</div>
+    <div class="ic"><strong>Руки</strong>3D скелет + pinch</div>
+    <div class="ic"><strong>Сессия</strong>10 образцов</div>
   </div>
-
-  <button class="btn-primary" id="ar-btn">🥽 Войти в AR</button>
-  <button class="btn-secondary" id="demo-btn">🖥 Демо-режим (мышь/тач)</button>
-  <div id="no-xr-msg">WebXR / immersive-ar не поддерживается.<br>Откройте в браузере Meta Quest 3.</div>
+  <button class="btn-p" id="ar-btn">🥽 Войти в AR</button>
+  <button class="btn-s" id="demo-btn">🖥 Демо-режим (мышь)</button>
+  <div id="no-xr">WebXR не поддерживается.<br>Откройте в Meta Browser на Quest 3.</div>
 </div>
 
-<!-- ═══ OVERLAY ══════════════════════════════════════════════════════════ -->
+<!-- DOM OVERLAY -->
 <div id="overlay">
-  <div id="top-bar">
-    <div id="score-pill">✓ <span id="sc-ok">0</span> / <span id="sc-tot">0</span></div>
-    <div id="sample-dots"></div>
-    <div id="hand-status">✋ руки не найдены</div>
-    <button id="exit-btn">✕</button>
+  <div id="topbar">
+    <div id="score-pill">✓ <span id="sc-ok">0</span>/<span id="sc-tot">0</span></div>
+    <div id="hand-pill">✋ ожидание</div>
+    <button id="exit-btn">✕ выйти</button>
   </div>
 
   <div id="task-card">
-    <div class="card-eyebrow">
+    <div class="eyebrow">
       Определите вкус
-      <div class="sample-badge">образец #<span id="smp-num">1</span></div>
+      <div class="badge">образец #<span id="smp-n">1</span></div>
     </div>
-    <div class="card-question">Попробуйте образец.<br>Что вы ощущаете?</div>
-    <div class="taste-grid" id="taste-grid"></div>
+    <div class="question">Попробуйте образец.<br>Что вы ощущаете?</div>
+    <div class="tgrid" id="tgrid"></div>
   </div>
 
-  <div id="feedback-card">
-    <div id="feedback-verdict"></div>
-    <div class="fb-row"><span class="fb-label">Вещество</span><span class="fb-value fb-molecule" id="fb-mol"></span></div>
-    <div class="fb-row"><span class="fb-label">Эталон</span><span class="fb-value" id="fb-ref"></span></div>
-    <div class="fb-row"><span class="fb-label">Порог</span><span class="fb-value" id="fb-thr"></span></div>
-    <div class="fb-row"><span class="fb-label">Профиль</span><span class="fb-value" id="fb-desc"></span></div>
+  <div id="fb-card">
+    <div id="fb-verdict"></div>
+    <div class="fbrow"><span class="fbl">Вещество</span><span class="fbv" id="fb-mol"></span></div>
+    <div class="fbrow"><span class="fbl">Эталон</span><span class="fbv" id="fb-ref"></span></div>
+    <div class="fbrow"><span class="fbl">Порог</span><span class="fbv" id="fb-thr"></span></div>
+    <div class="fbrow"><span class="fbl">Профиль</span><span class="fbv" id="fb-desc"></span></div>
     <button id="btn-next">Следующий образец →</button>
   </div>
 </div>
 
-<!-- ═══ SCORE ════════════════════════════════════════════════════════════ -->
+<!-- SCORE -->
 <div id="score-screen">
-  <div class="score-eyebrow">Сессия завершена</div>
-  <div class="score-num" id="sc-final">0/0</div>
-  <div class="score-label" id="sc-pct"></div>
-  <div id="score-breakdown"></div>
-  <button class="btn-primary" id="restart-btn" style="max-width:340px">↺ Начать заново</button>
+  <div style="font-size:.6rem;letter-spacing:.2em;color:#444;text-transform:uppercase;margin-bottom:.8rem">Сессия завершена</div>
+  <div class="snum" id="sc-num">0/0</div>
+  <div class="spct" id="sc-pct"></div>
+  <div id="sbd"></div>
+  <button class="btn-p" id="restart-btn" style="max-width:320px">↺ Начать заново</button>
 </div>
 
-<!-- ═══ THREE.JS + WEBXR HAND TRACKING ══════════════════════════════════ -->
 <script type="module">
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 
-// ── DATA ──────────────────────────────────────────────────────────────────
+// ═══ DATA ═════════════════════════════════════════════════════════════════
 const TASTES = [
-  { id:'sweet',   label:'Сладкий', emoji:'🍬', molecule:'Сахароза  C₁₂H₂₂O₁₁',  reference:'10 г/л в воде', threshold:'0.5–2 г/л',   descriptor:'Чистый, приятный, без послевкусия. Рецепторы T1R2/T1R3.', color:0xff8cc8 },
-  { id:'salty',   label:'Солёный', emoji:'🧂', molecule:'Хлорид натрия  NaCl',    reference:'2 г/л в воде',  threshold:'0.3–1 г/л',   descriptor:'Минеральный, усиливает другие вкусы. Na⁺ → ENaC-каналы.', color:0x57c8ff },
-  { id:'bitter',  label:'Горький', emoji:'☕', molecule:'Кофеин  C₈H₁₀N₄O₂',     reference:'0.5 г/л в воде',threshold:'0.05–0.3 г/л', descriptor:'Долгое послевкусие, развивается медленно. >25 типов TAS2R.', color:0xc8a857 },
-  { id:'umami',   label:'Умами',   emoji:'🍖', molecule:'Глутамат Na  C₅H₈NNaO₄', reference:'3 г/л в воде',  threshold:'0.1–0.5 г/л', descriptor:'Мясной, бульонный, обволакивающий. Синергист: ИМФ, ГМФ.', color:0xff7a57 },
-  { id:'pungent', label:'Острый',  emoji:'🌶️',molecule:'Капсаицин  C₁₈H₂₇NO₃',  reference:'0.001 г/л масло',threshold:'0.0003 г/л', descriptor:'ТРИГЕМИНАЛЬНЫЙ. Жгучий. TRPV1. SHU ≈ 16 000 000.', color:0xff4d4d },
+  {id:'sweet',  label:'Сладкий', emoji:'🍬', color:'#ff8cc8', molecule:'Сахароза C12H22O11', ref:'10 г/л в воде',   thr:'0.5–2 г/л',    desc:'Чистый, приятный. Рецепторы T1R2/T1R3.'},
+  {id:'salty',  label:'Солёный', emoji:'🧂', color:'#57c8ff', molecule:'NaCl',                ref:'2 г/л в воде',   thr:'0.3–1 г/л',    desc:'Минеральный. Na+ → ENaC-каналы.'},
+  {id:'bitter', label:'Горький', emoji:'☕', color:'#c8a857', molecule:'Кофеин C8H10N4O2',    ref:'0.5 г/л в воде', thr:'0.05–0.3 г/л', desc:'Долгое послевкусие. >25 типов TAS2R.'},
+  {id:'umami',  label:'Умами',   emoji:'🍖', color:'#ff7a57', molecule:'Глутамат Na',          ref:'3 г/л в воде',   thr:'0.1–0.5 г/л',  desc:'Мясной, обволакивающий. Синергист ИМФ.'},
+  {id:'pungent',label:'Острый',  emoji:'🌶', color:'#ff4d4d', molecule:'Капсаицин C18H27NO3', ref:'0.001 г/л масло',thr:'0.0003 г/л',   desc:'Тригеминальный. TRPV1. SHU 16M.'},
 ];
 
-// ── HAND JOINT INDICES (WebXR) ─────────────────────────────────────────
-const WRIST=0, THUMB_TIP=4, INDEX_TIP=8, MIDDLE_TIP=12;
+// WebXR hand joint names in order
+const JOINT_NAMES = [
+  'wrist',
+  'thumb-metacarpal','thumb-phalanx-proximal','thumb-phalanx-distal','thumb-tip',
+  'index-finger-metacarpal','index-finger-phalanx-proximal','index-finger-phalanx-intermediate','index-finger-phalanx-distal','index-finger-tip',
+  'middle-finger-metacarpal','middle-finger-phalanx-proximal','middle-finger-phalanx-intermediate','middle-finger-phalanx-distal','middle-finger-tip',
+  'ring-finger-metacarpal','ring-finger-phalanx-proximal','ring-finger-phalanx-intermediate','ring-finger-phalanx-distal','ring-finger-tip',
+  'pinky-finger-metacarpal','pinky-finger-phalanx-proximal','pinky-finger-phalanx-intermediate','pinky-finger-phalanx-distal','pinky-finger-tip',
+];
 
-// ── STATE ──────────────────────────────────────────────────────────────
-let xrSession=null, demoMode=false;
-let queue=[], idx=0, correct=0, total=0, answered=false, results=[];
-let handsDetected=false;
-let hoveredBtn=null, dwellStart=0, dwellBtn=null;
-const DWELL_TIME=800; // ms hold to confirm (fallback, pinch is primary)
-
-// ── THREE.JS ──────────────────────────────────────────────────────────
-const scene    = new THREE.Scene();
-const camera   = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 50);
-const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
-renderer.setSize(innerWidth, innerHeight);
+// ═══ THREE.JS ════════════════════════════════════════════════════════════
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
 renderer.setPixelRatio(devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
 renderer.xr.enabled = true;
 renderer.setClearColor(0x000000, 0);
 document.body.appendChild(renderer.domElement);
 
-window.addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.01, 50);
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const dl = new THREE.DirectionalLight(0xffffff,0.6); dl.position.set(1,3,2); scene.add(dl);
+window.addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
 
-scene.add(new THREE.AmbientLight(0xffffff,0.7));
-const dLight = new THREE.DirectionalLight(0xffffff,0.8);
-dLight.position.set(1,3,2); scene.add(dLight);
+// ═══ HAND SKELETON (3D spheres at each joint) ═════════════════════════
+// Two hands × 25 joints
+const HAND_JOINTS = [[], []]; // [left, right] arrays of meshes
+const jointMat = new THREE.MeshPhongMaterial({color:0xb8ff57, emissive:0x304000});
+const jointMatPinch = new THREE.MeshPhongMaterial({color:0xffffff, emissive:0x606060});
+const connMat = new THREE.LineBasicMaterial({color:0x608030, transparent:true, opacity:0.6});
 
-// ── 3D CUP MARKERS ────────────────────────────────────────────────────
-const GROUP = new THREE.Group();
-scene.add(GROUP);
-const MARKER_OFFSETS = [new THREE.Vector3(-0.28,0,-0.55), new THREE.Vector3(0,0,-0.55), new THREE.Vector3(0.28,0,-0.55)];
-const markerObjs = [];
+// Joint connections (bone pairs)
+const BONES = [
+  [0,1],[1,2],[2,3],[3,4],       // thumb
+  [0,5],[5,6],[6,7],[7,8],[8,9], // index
+  [0,10],[10,11],[11,12],[12,13],[13,14], // middle
+  [0,15],[15,16],[16,17],[17,18],[18,19], // ring
+  [0,20],[20,21],[21,22],[22,23],[23,24], // pinky
+  [5,10],[10,15],[15,20],        // palm
+];
 
-MARKER_OFFSETS.forEach((off,i)=>{
-  const g = new THREE.Group(); g.position.copy(off);
-  const cupGeo = new THREE.CylinderGeometry(0.038,0.028,0.075,20);
-  const cupMat = new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:0.15,side:THREE.DoubleSide});
-  g.add(new THREE.Mesh(cupGeo,cupMat));
-  const ringGeo = new THREE.TorusGeometry(0.05,0.005,8,48);
-  const ringMat = new THREE.MeshPhongMaterial({color:0xa0a0a0,emissive:0x202020});
-  const ring = new THREE.Mesh(ringGeo,ringMat); ring.rotation.x=Math.PI/2; ring.position.y=0.05; g.add(ring);
-  const orbGeo = new THREE.SphereGeometry(0.018,16,16);
-  const orbMat = new THREE.MeshPhongMaterial({color:0x888888,emissive:0x111111,transparent:true,opacity:0.85});
-  const orb = new THREE.Mesh(orbGeo,orbMat); orb.position.y=0.13; g.add(orb);
-  GROUP.add(g);
-  markerObjs.push({g,ring,ringMat,orb,orbMat});
+const HAND_GROUPS = [new THREE.Group(), new THREE.Group()];
+HAND_GROUPS.forEach((g,hi)=>{
+  // Joint spheres
+  for(let i=0;i<25;i++){
+    const r = (i%5===4) ? 0.008 : 0.006; // tips slightly larger
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r,8,8), jointMat.clone());
+    m.visible=false;
+    g.add(m);
+    HAND_JOINTS[hi].push(m);
+  }
+  // Bone lines
+  BONES.forEach(([a,b])=>{
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+    const line = new THREE.Line(geo, connMat.clone());
+    line.visible=false;
+    line.userData={boneA:a, boneB:b};
+    g.add(line);
+  });
+  scene.add(g);
 });
 
-function highlightMarker(ai){
-  markerObjs.forEach((m,i)=>{
-    const on=i===ai;
-    m.ringMat.color.setHex(on?0xb8ff57:0x444444);
-    m.ringMat.emissive.setHex(on?0x405700:0x060606);
-    m.orbMat.color.setHex(on?0xb8ff57:0x888888);
-    m.orbMat.emissive.setHex(on?0x304000:0x111111);
-    m.g.scale.setScalar(on?1.25:1.0);
-  });
-}
+// Finger ray (from index proximal → tip extended)
+const rayMat = new THREE.LineBasicMaterial({color:0xb8ff57,transparent:true,opacity:0.8});
+const rayGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+const rayLine = new THREE.Line(rayGeo,rayMat);
+scene.add(rayLine); rayLine.visible=false;
 
-// ── HAND CURSOR (3D sphere for fingertip position) ────────────────────
-const cursorGeo = new THREE.SphereGeometry(0.012,12,12);
-const cursorMat = new THREE.MeshPhongMaterial({color:0xb8ff57,emissive:0x406000,transparent:true,opacity:0.85});
-const cursor3D  = new THREE.Mesh(cursorGeo,cursorMat);
-cursor3D.visible=false;
-scene.add(cursor3D);
-
-// Pinch ring (shows pinch proximity)
-const pinchGeo = new THREE.TorusGeometry(0.018,0.002,6,32);
-const pinchMat = new THREE.MeshPhongMaterial({color:0xb8ff57,emissive:0x406000,transparent:true,opacity:0});
-const pinchRing= new THREE.Mesh(pinchGeo,pinchMat);
-scene.add(pinchRing);
-
-// ── ANIMATION ─────────────────────────────────────────────────────────
-const clock = new THREE.Clock();
-let lastPinchState = false;
-
-renderer.setAnimationLoop((time, xrFrame)=>{
-  const t = clock.getElapsedTime();
-  markerObjs.forEach((m,i)=>{ m.orb.position.y=0.13+Math.sin(t*1.4+i*1.3)*0.012; m.orb.rotation.y=t*0.6; });
-
-  // Position cups relative to XR camera (reliable on any floor calibration)
-  if(xrSession){
-    const xrCam = renderer.xr.getCamera(camera);
-    const forward = new THREE.Vector3(0,0,-1).applyQuaternion(xrCam.quaternion);
-    forward.y = 0; forward.normalize();
-    // Place 0.7m in front, 0.35m below eye level
-    GROUP.position.set(
-      xrCam.position.x + forward.x * 0.7,
-      xrCam.position.y - 0.35,
-      xrCam.position.z + forward.z * 0.7
-    );
-    GROUP.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),
-      Math.atan2(forward.x, forward.z));
-  }
-
-  if(xrFrame && xrSession){
-    processHands(xrFrame, time);
-  }
-  renderer.render(scene,camera);
+// ═══ CUPS ════════════════════════════════════════════════════════════════
+const CUPS = new THREE.Group(); scene.add(CUPS);
+const cupObjs=[];
+[-0.22,0,0.22].forEach((x,i)=>{
+  const g=new THREE.Group(); g.position.set(x,0,0);
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.038,0.028,0.075,20),new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:0.15,side:THREE.DoubleSide})));
+  const rm=new THREE.MeshPhongMaterial({color:0x444444,emissive:0x080808});
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.05,0.005,8,48),rm); ring.rotation.x=Math.PI/2; ring.position.y=0.055; g.add(ring);
+  const om=new THREE.MeshPhongMaterial({color:0x888888,emissive:0x111111,transparent:true,opacity:0.85});
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(0.018,16,16),om); orb.position.y=0.13; g.add(orb);
+  CUPS.add(g); cupObjs.push({g,ring,rm,orb,om});
 });
+function hlCup(ai){ cupObjs.forEach((c,i)=>{ const on=i===ai; c.rm.color.setHex(on?0xb8ff57:0x444444); c.rm.emissive.setHex(on?0x304000:0x080808); c.om.color.setHex(on?0xb8ff57:0x888888); c.g.scale.setScalar(on?1.3:1.0); }); }
 
-// ── HAND TRACKING CORE ────────────────────────────────────────────────
-function processHands(frame, time){
-  const refSpace = renderer.xr.getReferenceSpace();
-  if(!refSpace) return;
+// ═══ SESSION STATE ════════════════════════════════════════════════════════
+let xrSession=null, demoMode=false;
+let queue=[],qi=0,okCount=0,totCount=0,answered=false,results=[];
+let lastPinch=false, hoveredBtn=null;
 
-  let anyHand=false;
-  for(const inputSource of xrSession.inputSources){
-    if(!inputSource.hand) continue;
-    anyHand=true;
-
-    const hand = inputSource.hand;
-    const indexTipJoint  = hand.get('index-finger-tip');
-    const thumbTipJoint  = hand.get('thumb-tip');
-    if(!indexTipJoint || !thumbTipJoint) continue;
-
-    const indexPose = frame.getJointPose(indexTipJoint, refSpace);
-    const thumbPose = frame.getJointPose(thumbTipJoint, refSpace);
-    if(!indexPose || !thumbPose) continue;
-
-    // Index tip position → 3D cursor
-    const ip = indexPose.transform.position;
-    cursor3D.position.set(ip.x, ip.y, ip.z);
-    cursor3D.visible=true;
-
-    // Thumb tip position
-    const tp = thumbPose.transform.position;
-    pinchRing.position.set((ip.x+tp.x)/2,(ip.y+tp.y)/2,(ip.z+tp.z)/2);
-
-    // Pinch distance
-    const dx=ip.x-tp.x, dy=ip.y-tp.y, dz=ip.z-tp.z;
-    const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
-    const isPinching = dist < 0.025; // ~2.5 cm
-
-    // Pinch ring opacity = proximity
-    pinchMat.opacity = Math.max(0, Math.min(0.9, (0.06-dist)/0.04));
-    pinchRing.visible=true;
-
-    // Project index tip to screen using XR camera
-    const xrCam = renderer.xr.getCamera(camera);
-    const vec = new THREE.Vector3(ip.x,ip.y,ip.z);
-    vec.project(xrCam);
-    const sx = (vec.x*0.5+0.5)*window.innerWidth;
-    const sy = (-(vec.y)*0.5+0.5)*window.innerHeight;
-
-    updateHover(sx, sy);
-
-    // Pinch = click (rising edge only)
-    if(isPinching && !lastPinchState){
-      if(hoveredBtn && !hoveredBtn.disabled) hoveredBtn.click();
-    }
-    lastPinchState = isPinching;
-    break; // use first hand found
-  }
-
-  if(!anyHand){
-    cursor3D.visible=false;
-    pinchRing.visible=false;
-    if(handsDetected){ handsDetected=false; updateHandStatus(); }
-  } else {
-    if(!handsDetected){ handsDetected=true; updateHandStatus(); }
-  }
-}
-
-function updateHandStatus(){
-  const el=document.getElementById('hand-status');
-  if(handsDetected){ el.textContent='✋ руки активны'; el.classList.add('active'); }
-  else              { el.textContent='✋ руки не найдены'; el.classList.remove('active'); }
-}
-
-// ── HOVER via finger position ─────────────────────────────────────────
-function updateHover(sx, sy){
-  const els = document.querySelectorAll('.t-btn:not(:disabled), #btn-next');
-  let found=null;
-  els.forEach(el=>{
-    const r=el.getBoundingClientRect();
-    if(sx>=r.left && sx<=r.right && sy>=r.top && sy<=r.bottom) found=el;
-  });
-
-  if(found !== hoveredBtn){
-    if(hoveredBtn){ hoveredBtn.classList.remove('hovered'); clearDwellBar(hoveredBtn); }
-    hoveredBtn=found;
-    if(hoveredBtn){ hoveredBtn.classList.add('hovered'); startDwellBar(hoveredBtn); }
-  }
-}
-
-// Dwell bar (visual feedback while hovering)
-function startDwellBar(btn){
-  let bar = btn.querySelector('.dwell-bar');
-  if(!bar){ bar=document.createElement('div'); bar.className='dwell-bar'; btn.appendChild(bar); }
-  bar.style.transition='none'; bar.style.width='0%';
-  requestAnimationFrame(()=>{
-    bar.style.transition=`width ${DWELL_TIME}ms linear`;
-    bar.style.width='100%';
-  });
-}
-function clearDwellBar(btn){
-  const bar=btn.querySelector('.dwell-bar');
-  if(bar){ bar.style.transition='none'; bar.style.width='0%'; }
-  btn.classList.remove('hovered','pinching');
-}
-
-// ── SESSION LOGIC ─────────────────────────────────────────────────────
-function buildDots(n){
-  const el=document.getElementById('sample-dots'); el.innerHTML='';
-  for(let i=0;i<n;i++){ const d=document.createElement('div'); d.className='s-dot'; d.id=`dot-${i}`; el.appendChild(d); }
-}
-
-function updateDots(){
-  for(let i=0;i<queue.length;i++){
-    const d=document.getElementById(`dot-${i}`); if(!d) continue;
-    d.className='s-dot'+(i<idx?' done':i===idx?' active':'');
-  }
-}
-
+// ═══ DOM HELPERS ══════════════════════════════════════════════════════════
 function buildButtons(){
-  const grid=document.getElementById('taste-grid'); grid.innerHTML='';
-  TASTES.forEach((t,ti)=>{
+  const grid=document.getElementById('tgrid'); grid.innerHTML='';
+  TASTES.forEach((t,i)=>{
     const btn=document.createElement('button');
-    btn.className='taste-btn t-btn'+(ti===4?' full':'');
+    btn.className='tbtn'+(i===4?' wide':'');
     btn.dataset.id=t.id;
-    btn.innerHTML=`<span>${t.emoji}</span>${t.label}<div class="dwell-bar"></div>`;
+    btn.innerHTML=`<span>${t.emoji}</span><span style="color:${t.color}">${t.label}</span><div class="pbar"></div>`;
     btn.addEventListener('click',()=>onAnswer(t.id));
     grid.appendChild(btn);
   });
 }
 
-function startSession(){
-  queue=[...TASTES,...TASTES].sort(()=>Math.random()-0.5);
-  idx=0; correct=0; total=0; answered=false; results=[];
-  buildDots(queue.length); buildButtons();
-  document.getElementById('overlay').classList.add('active');
-  document.getElementById('feedback-card').style.display='none';
+function showOverlay(v){ document.getElementById('overlay').className=v?'show':''; }
+
+function updateScorePill(ok,tot){ document.getElementById('sc-ok').textContent=ok; document.getElementById('sc-tot').textContent=tot; }
+
+function setHandPill(on){ const p=document.getElementById('hand-pill'); p.textContent=on?'✋ активны':'✋ ожидание'; p.className=on?'on':''; }
+
+// ═══ SESSION LOGIC ════════════════════════════════════════════════════════
+function startSess(){
+  queue=[...TASTES,...TASTES].sort(()=>Math.random()-.5);
+  qi=0;okCount=0;totCount=0;answered=false;results=[];
+  buildButtons();
+  document.getElementById('fb-card').style.display='none';
   document.getElementById('task-card').style.display='block';
-  document.getElementById('score-screen').style.display='none';
   showSample();
 }
 
 function showSample(){
-  if(idx>=queue.length){ endSession(); return; }
+  if(qi>=queue.length){endSess();return;}
   answered=false;
-  document.getElementById('smp-num').textContent=idx+1;
-  document.getElementById('feedback-card').style.display='none';
+  document.getElementById('fb-card').style.display='none';
   document.getElementById('task-card').style.display='block';
-  document.querySelectorAll('.t-btn').forEach(b=>{ b.classList.remove('correct','wrong','hovered'); b.disabled=false; clearDwellBar(b); });
-  highlightMarker(idx%3); updateDots(); updateScore();
+  document.getElementById('smp-n').textContent=qi+1;
+  document.querySelectorAll('.tbtn').forEach(b=>{ b.classList.remove('correct','wrong','hov'); b.disabled=false; });
+  hlCup(qi%3);
+  updateScorePill(okCount,totCount);
 }
 
-function onAnswer(answerId){
-  if(answered) return; answered=true;
-  const t=queue[idx]; const ok=answerId===t.id;
-  if(ok) correct++; total++;
-  results.push({taste:t,answer:answerId,ok});
-  document.querySelectorAll('.t-btn').forEach(b=>{ b.disabled=true; if(b.dataset.id===t.id) b.classList.add('correct'); else if(b.dataset.id===answerId&&!ok) b.classList.add('wrong'); });
-  document.getElementById('feedback-verdict').textContent=ok?`✓ Верно!  ${t.emoji} ${t.label}`:`✗ Неверно. Это  ${t.emoji} ${t.label}`;
-  document.getElementById('feedback-verdict').style.color=ok?'#b8ff57':'#ff4d4d';
+function onAnswer(tasteId){
+  if(answered)return; answered=true;
+  const t=queue[qi]; const ok=tasteId===t.id;
+  if(ok)okCount++; totCount++;
+  results.push({taste:t,answer:tasteId,ok});
+  document.querySelectorAll('.tbtn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.id===t.id)              b.classList.add('correct');
+    else if(b.dataset.id===tasteId&&!ok) b.classList.add('wrong');
+  });
+  document.getElementById('fb-verdict').textContent=(ok?'✓ Верно!  ':'✗ Неверно. ')+t.emoji+' '+t.label;
+  document.getElementById('fb-verdict').style.color=ok?'#b8ff57':'#ff4d4d';
   document.getElementById('fb-mol').textContent=t.molecule;
-  document.getElementById('fb-ref').textContent=t.reference;
-  document.getElementById('fb-thr').textContent=t.threshold;
-  document.getElementById('fb-desc').textContent=t.descriptor;
-  document.getElementById('feedback-card').style.display='block';
-  updateScore();
+  document.getElementById('fb-ref').textContent=t.ref;
+  document.getElementById('fb-thr').textContent=t.thr;
+  document.getElementById('fb-desc').textContent=t.desc;
+  document.getElementById('fb-card').style.display='block';
+  updateScorePill(okCount,totCount);
 }
 
-function updateScore(){ document.getElementById('sc-ok').textContent=correct; document.getElementById('sc-tot').textContent=total; }
-
-function endSession(){
-  document.getElementById('overlay').classList.remove('active');
-  const pct=total?Math.round(correct/total*100):0;
-  document.getElementById('sc-final').textContent=`${correct}/${total}`;
-  document.getElementById('sc-pct').textContent=pct>=90?`${pct}% — Отличный результат!`:pct>=70?`${pct}% — Хорошо. Повторите слабые позиции.`:`${pct}% — Требуется дополнительная практика.`;
-  const bd=document.getElementById('score-breakdown'); bd.innerHTML='';
-  TASTES.forEach(t=>{ const rel=results.filter(r=>r.taste.id===t.id); const okN=rel.filter(r=>r.ok).length; const row=document.createElement('div'); row.className='breakdown-row'; row.innerHTML=`<span class="breakdown-taste">${t.emoji} ${t.label}</span><span class="breakdown-result ${okN===rel.length?'ok':'fail'}">${okN}/${rel.length}</span>`; bd.appendChild(row); });
+function endSess(){
+  showOverlay(false);
+  const pct=totCount?Math.round(okCount/totCount*100):0;
+  document.getElementById('sc-num').textContent=`${okCount}/${totCount}`;
+  document.getElementById('sc-pct').textContent=pct>=90?`${pct}% — Отлично!`:pct>=70?`${pct}% — Хорошо, повтори слабые.`:`${pct}% — Нужна практика.`;
+  const bd=document.getElementById('sbd'); bd.innerHTML='';
+  TASTES.forEach(t=>{const r=results.filter(x=>x.taste.id===t.id);const o=r.filter(x=>x.ok).length;bd.innerHTML+=`<div class="sr"><span class="st">${t.emoji} ${t.label}</span><span class="ss ${o===r.length?'ok':'fail'}">${o}/${r.length}</span></div>`;});
   document.getElementById('score-screen').style.display='flex';
-  if(xrSession){ xrSession.end(); xrSession=null; }
+  if(xrSession){xrSession.end();xrSession=null;}
 }
 
-// ── AR ENTRY ──────────────────────────────────────────────────────────
-document.getElementById('ar-btn').addEventListener('click', async()=>{
-  if(!navigator.xr){ document.getElementById('no-xr-msg').style.display='block'; return; }
-  const supported=await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
-  if(!supported){ document.getElementById('no-xr-msg').style.display='block'; return; }
-  try {
-    // DOM overlay root must be visible BEFORE session request
-    document.getElementById('start-screen').style.display='none';
-    document.getElementById('overlay').classList.add('active');
+// ═══ HAND TRACKING + PINCH → DOM CLICK ════════════════════════════════════
+function procHands(frame){
+  const ref=renderer.xr.getReferenceSpace(); if(!ref) return;
+  let anyHand=false;
 
+  Array.from(xrSession.inputSources).forEach((src,hi)=>{
+    if(!src.hand||hi>1) return;
+    anyHand=true;
+    const hand=src.hand;
+    const joints=HAND_JOINTS[hi];
+    const group=HAND_GROUPS[hi];
+    const poses=[];
+
+    // Update joint spheres
+    JOINT_NAMES.forEach((name,ji)=>{
+      const joint=hand.get(name); if(!joint){poses.push(null);return;}
+      const pose=frame.getJointPose(joint,ref); if(!pose){poses.push(null);return;}
+      const {x,y,z}=pose.transform.position;
+      joints[ji].position.set(x,y,z);
+      joints[ji].visible=true;
+      poses.push({x,y,z});
+    });
+
+    // Update bone lines
+    group.children.forEach(child=>{
+      if(!child.userData.boneA && child.userData.boneA!==0) return;
+      const a=poses[child.userData.boneA], b=poses[child.userData.boneB];
+      if(a&&b){
+        child.geometry.setFromPoints([new THREE.Vector3(a.x,a.y,a.z),new THREE.Vector3(b.x,b.y,b.z)]);
+        child.geometry.attributes.position.needsUpdate=true;
+        child.visible=true;
+      } else { child.visible=false; }
+    });
+
+    // Pinch detection (index tip #9 + thumb tip #4)
+    if(hi===0){ // use first hand for interaction
+      const iTip=poses[9], tTip=poses[4],
+            iProx=poses[6]; // index proximal for ray direction
+      if(iTip&&tTip&&iProx){
+        // Pinch distance
+        const dist=Math.sqrt((iTip.x-tTip.x)**2+(iTip.y-tTip.y)**2+(iTip.z-tTip.z)**2);
+        const pinching=dist<0.028;
+
+        // Highlight tip joints when pinching
+        joints[9].material.color.setHex(pinching?0xffffff:0xb8ff57);
+        joints[4].material.color.setHex(pinching?0xffffff:0xb8ff57);
+
+        // Ray from proximal → tip → extended
+        const dir=new THREE.Vector3(iTip.x-iProx.x, iTip.y-iProx.y, iTip.z-iProx.z).normalize();
+        const origin=new THREE.Vector3(iTip.x,iTip.y,iTip.z);
+        const end=origin.clone().addScaledVector(dir,0.5);
+        rayGeo.setFromPoints([origin,end]);
+        rayGeo.attributes.position.needsUpdate=true;
+        rayLine.visible=true;
+
+        // Project index tip to screen coords
+        const xrCam=renderer.xr.getCamera(camera);
+        const v=new THREE.Vector3(iTip.x,iTip.y,iTip.z);
+        v.project(xrCam);
+        const sx=(v.x*0.5+0.5)*window.innerWidth;
+        const sy=(1-(v.y*0.5+0.5))*window.innerHeight;
+
+        // Find DOM element under fingertip
+        const el=document.elementFromPoint(sx,sy);
+        const btn=el?.closest('.tbtn, #btn-next');
+
+        // Hover effect
+        if(btn!==hoveredBtn){
+          if(hoveredBtn){ hoveredBtn.classList.remove('hov'); clearPbar(hoveredBtn); }
+          hoveredBtn=btn;
+          if(hoveredBtn&&!hoveredBtn.disabled){ hoveredBtn.classList.add('hov'); startPbar(hoveredBtn); }
+        }
+
+        // Pinch rising edge = click
+        if(pinching&&!lastPinch&&btn&&!btn.disabled){
+          btn.click();
+        }
+        lastPinch=pinching;
+      }
+    }
+  });
+
+  if(!anyHand){
+    HAND_GROUPS.forEach(g=>g.children.forEach(c=>c.visible=false));
+    rayLine.visible=false; lastPinch=false;
+    if(hoveredBtn){hoveredBtn.classList.remove('hov');clearPbar(hoveredBtn);hoveredBtn=null;}
+    setHandPill(false);
+  } else {
+    setHandPill(true);
+  }
+}
+
+function startPbar(btn){
+  const bar=btn.querySelector('.pbar'); if(!bar) return;
+  bar.style.transition='none'; bar.style.width='0%';
+  requestAnimationFrame(()=>{ bar.style.transition='width 0.8s linear'; bar.style.width='100%'; });
+}
+function clearPbar(btn){
+  const bar=btn?.querySelector('.pbar'); if(!bar) return;
+  bar.style.transition='none'; bar.style.width='0%';
+}
+
+// ═══ CUPS POSITION (once, locked to floor in front of user) ═══════════════
+let cupsPlaced=false;
+function placeCups(){
+  if(cupsPlaced) return;
+  const xc=renderer.xr.getCamera(camera);
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(xc.quaternion); fwd.y=0; fwd.normalize();
+  // Cups: 0.7m forward, at floor+0.78m (table height)
+  CUPS.position.set(xc.position.x+fwd.x*0.7, xc.position.y-0.92, xc.position.z+fwd.z*0.7);
+  const e=new THREE.Euler().setFromQuaternion(xc.quaternion,'YXZ'); e.x=0;e.z=0;
+  CUPS.quaternion.setFromEuler(e);
+  cupsPlaced=true;
+}
+
+// ═══ RENDER LOOP ══════════════════════════════════════════════════════════
+const clock=new THREE.Clock();
+renderer.setAnimationLoop((time,frame)=>{
+  const t=clock.getElapsedTime();
+  cupObjs.forEach((c,i)=>{ c.orb.position.y=0.13+Math.sin(t*1.4+i*1.3)*0.012; c.orb.rotation.y=t*0.6; });
+  if(xrSession){
+    placeCups();
+    if(frame) procHands(frame);
+  }
+  renderer.render(scene,camera);
+});
+
+// ═══ AR ENTRY ════════════════════════════════════════════════════════════
+document.getElementById('ar-btn').addEventListener('click',async()=>{
+  if(!navigator.xr){document.getElementById('no-xr').style.display='block';return;}
+  const ok=await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
+  if(!ok){document.getElementById('no-xr').style.display='block';return;}
+  try{
     xrSession=await navigator.xr.requestSession('immersive-ar',{
       requiredFeatures:['local-floor'],
       optionalFeatures:['hand-tracking','dom-overlay'],
-      domOverlay:{root:document.getElementById('overlay')}
+      domOverlay:{root:document.getElementById('overlay')},
     });
     renderer.xr.setReferenceSpaceType('local-floor');
     await renderer.xr.setSession(xrSession);
-    startSession();
+    cupsPlaced=false;
+    document.getElementById('start').style.display='none';
+    showOverlay(true);
+    startSess();
     xrSession.addEventListener('end',()=>{
-      document.getElementById('start-screen').style.display='flex';
-      document.getElementById('overlay').classList.remove('active');
+      showOverlay(false);
+      document.getElementById('start').style.display='flex';
       xrSession=null;
     });
-  } catch(e){ alert('Ошибка AR: '+e.message); }
+  }catch(e){alert('AR ошибка: '+e.message);}
 });
 
-// ── DEMO MODE ─────────────────────────────────────────────────────────
+// ═══ DEMO ════════════════════════════════════════════════════════════════
 document.getElementById('demo-btn').addEventListener('click',()=>{
   demoMode=true;
-  GROUP.position.set(0,-0.3,-1.2);
-  document.getElementById('start-screen').style.display='none';
-  document.getElementById('hand-status').style.display='none';
-  startSession();
+  document.getElementById('start').style.display='none';
+  showOverlay(true);
+  // Demo: position cups in 3D for visual
+  CUPS.position.set(0,-0.4,-1.0);
+  startSess();
 });
 
-// ── CONTROLS ──────────────────────────────────────────────────────────
-document.getElementById('btn-next').addEventListener('click',()=>{ idx++; showSample(); });
-document.getElementById('exit-btn').addEventListener('click', endSession);
+document.getElementById('btn-next').addEventListener('click',()=>{ qi++; showSample(); });
+document.getElementById('exit-btn').addEventListener('click',endSess);
 document.getElementById('restart-btn').addEventListener('click',()=>{
   document.getElementById('score-screen').style.display='none';
-  if(demoMode) startSession(); else document.getElementById('start-screen').style.display='flex';
+  if(demoMode)startSess(); else document.getElementById('start').style.display='flex';
 });
 
-// ── XR CHECK ──────────────────────────────────────────────────────────
-if(!navigator.xr){ const b=document.getElementById('ar-btn'); b.disabled=true; b.textContent='🥽 WebXR недоступен'; }
+if(!navigator.xr){const b=document.getElementById('ar-btn');b.disabled=true;b.textContent='🥽 WebXR недоступен';}
 </script>
 </body>
 </html>
